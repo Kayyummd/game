@@ -85,6 +85,7 @@ rooms = {}
 def handle_join(data):
     room = data["room"]
     sid = request.sid
+    username = data.get("username", "Player")
     is_host = data.get("host", False)
 
     if room not in rooms:
@@ -92,17 +93,22 @@ def handle_join(data):
             "players": [],
             "host": None,
             "guest": None,
+            "names": {},
             "toss_choice": None,
             "toss_result": None,
             "toss_winner": None,
             "bat_first_sid": None,
             "moves": {},
+            "scores": {},
+            "innings": 1,
+            "outs": 0,
             "chat": []
         }
 
     r = rooms[room]
     if sid not in r["players"]:
         r["players"].append(sid)
+        r["names"][sid] = username
     if is_host:
         r["host"] = sid
     else:
@@ -161,8 +167,33 @@ def handle_player_move(data):
         p1, p2 = r["players"]
         m1, m2 = r["moves"][p1], r["moves"][p2]
 
+        batter_sid = r["bat_first_sid"] if r["innings"] == 1 else next(p for p in r["players"] if p != r["bat_first_sid"])
+        r["scores"][batter_sid] = r["scores"].get(batter_sid, 0) + (m1 if batter_sid == p1 else m2)
+
         if m1 == m2:
+            r["outs"] += 1
             emit("round_result", {"type": "out", "num": m1}, room=room)
+
+            if r["innings"] == 1:
+                r["innings"] = 2
+                r["outs"] = 0
+                r["moves"] = {}
+                return
+            else:
+                p1_score = r["scores"].get(p1, 0)
+                p2_score = r["scores"].get(p2, 0)
+                if p1_score > p2_score:
+                    winner, loser = p1, p2
+                elif p2_score > p1_score:
+                    winner, loser = p2, p1
+                else:
+                    winner = loser = None  # Tie
+                emit("game_over", {
+                    "winner": winner,
+                    "loser": loser,
+                    "winner_name": r["names"].get(winner, "Player"),
+                    "loser_name": r["names"].get(loser, "Player")
+                }, room=room)
         else:
             emit("round_result", {"type": "continue", "moves": {p1: m1, p2: m2}}, room=room)
 
@@ -178,6 +209,18 @@ def handle_send_message(data):
         return
     r["chat"].append({"username": username, "message": message})
     emit("receive_message", {"username": username, "message": message}, room=room)
+
+@socketio.on("restart_game")
+def handle_restart(data):
+    room = data["room"]
+    r = rooms.get(room)
+    if not r:
+        return
+    r["moves"] = {}
+    r["scores"] = {}
+    r["outs"] = 0
+    r["innings"] = 1
+    emit("game_start", {"bat_first_sid": r["bat_first_sid"]}, room=room)
 
 # --- Run Server ---
 if __name__ == "__main__":
