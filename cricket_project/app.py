@@ -70,9 +70,9 @@ def game():
 def game_bot():
     return render_template("game_bot.html")
 
-@app.route("/multiplayer_game")
-def multiplayer_game():
-    return render_template("multiplayer_game.html")
+@app.route("/room")
+def room():
+    return render_template("room.html")
 
 
 # --- Game State Management ---
