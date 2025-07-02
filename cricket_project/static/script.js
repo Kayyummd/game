@@ -22,7 +22,7 @@ function login() {
     if (data.success) {
       showMessage("Login successful! 🎉", true);
       setTimeout(() => {
-        window.location.href = "game.html";  // Redirect to game screen
+        window.location.href = "/game.html";  // Redirect to game screen
       }, 1000);
     } else {
       showMessage(data.message || "Login failed.");
