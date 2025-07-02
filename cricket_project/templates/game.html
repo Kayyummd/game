@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Choose Mode - Hand Cricket</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">🕹️ Choose Game Mode</h1>
+
+    <div class="button-group">
+      <button onclick="playBot()">▶ Play With Bot</button>
+      <button onclick="showFriendOptions()">▶ Play With Friend</button>
+    </div>
+
+    <div id="friend-options" style="display:none; margin-top: 20px;">
+      <button onclick="createRoom()">🎮 Create Room</button>
+      <button onclick="joinRoom()">🔗 Join Room</button>
+    </div>
+
+    <div id="room-form" style="display:none; margin-top: 15px;">
+      <input type="text" id="roomCode" placeholder="Enter Room Code" />
+      <button onclick="confirmJoin()">Join</button>
+      <p id="message"></p>
+    </div>
+  </div>
+
+  <script>
+    function playBot() {
+      alert("🎮 Starting solo game vs Bot...");
+      // Redirect to solo game
+      window.location.href = "game_bot.html";
+    }
+
+    function showFriendOptions() {
+      document.getElementById("friend-options").style.display = "block";
+    }
+
+    function createRoom() {
+      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      alert("🔑 Room Created: " + roomCode);
+      // You can redirect to a multiplayer room handler page with roomCode
+      window.location.href = "room.html?room=" + roomCode + "&host=true";
+    }
+
+    function joinRoom() {
+      document.getElementById("room-form").style.display = "block";
+    }
+
+    function confirmJoin() {
+      const roomCode = document.getElementById("roomCode").value.trim().toUpperCase();
+      if (!roomCode) {
+        document.getElementById("message").innerText = "Please enter a valid room code.";
+        return;
+      }
+      window.location.href = "room.html?room=" + roomCode;
+    }
+  </script>
+</body>
+</html>

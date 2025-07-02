@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Retro Hand Cricket - Bot Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Press Start 2P', cursive;
+      background: repeating-linear-gradient(45deg, #0d0d0d, #0d0d0d 10px, #1a1a1a 10px, #1a1a1a 20px);
+      color: #ffcc00;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      border: 4px double #ffcc00;
+      padding: 10px 20px;
+      background-color: #000;
+      box-shadow: 0 0 20px #ffcc00;
+      width: 95%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #00ffcc;
+      text-shadow: 2px 2px #000;
+    }
+
+    .character-container {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 5px 0;
+      border-top: 2px dashed #ffcc00;
+      border-bottom: 2px dashed #ffcc00;
+      min-height: 160px;
+      box-sizing: border-box;
+    }
+
+    .character-side {
+      width: 48%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .pixel-character {
+      position: relative;
+      width: 80px;
+      height: 150px;
+    }
+
+    .head {
+      width: 50px; height: 50px;
+      background: #ffe0bd; border: 3px solid #000;
+      border-radius: 5px;
+      position: absolute; top: 0; left: 15px;
+    }
+
+    .hair {
+      width: 50px; height: 20px;
+      background: #3b2f2f;
+      position: absolute; top: 0; left: 0;
+    }
+
+    .body {
+      width: 50px; height: 60px;
+      background: #0055ff; border: 3px solid #000;
+      position: absolute; top: 50px; left: 15px;
+    }
+
+    .body.bowler { background: darkred; }
+
+    .arm {
+      width: 15px; height: 40px;
+      background: #ffe0bd; border: 2px solid #000;
+      position: absolute; top: 55px;
+    }
+
+    .left-arm { left: 0; }
+    .right-arm { right: 0; }
+
+    .leg {
+      width: 20px; height: 30px;
+      background: #333; border: 2px solid #000;
+      position: absolute; top: 110px;
+    }
+
+    .left-leg { left: 15px; }
+    .right-leg { left: 45px; }
+
+    .bat {
+      width: 10px; height: 60px;
+      background: #8b4513; border: 2px solid #000;
+      position: absolute; top: 40px; right: -15px;
+      transform-origin: top right;
+    }
+
+    .ball {
+      width: 12px; height: 12px;
+      background: red; border-radius: 50%; border: 2px solid #000;
+      position: absolute; left: -20px; top: 50%;
+    }
+
+    .btn {
+      background-color: #222;
+      color: #ffcc00;
+      border: 2px solid #ffcc00;
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background-color: #ffcc00;
+      color: #000;
+    }
+
+    .score-panel, .choice-panel { margin-top: 10px; }
+
+    .number-btn {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      font-size: 10px;
+    }
+
+    .score-history-panel {
+      margin-top: 10px;
+      color: #00ffcc;
+    }
+
+    .hidden { display: none; }
+
+    @keyframes bowl-to-bat {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(150px); opacity: 0; }
+    }
+
+    .bowl-anim {
+      animation: bowl-to-bat 0.4s linear forwards;
+    }
+
+    @keyframes bat-swing {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(-45deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .swing {
+      animation: bat-swing 0.4s ease;
+    }
+
+    .confetti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: hsl(calc(360 * var(--hue)), 100%, 50%);
+      top: 0;
+      opacity: 0.9;
+      border-radius: 2px;
+      animation: fall var(--duration, 3s) linear forwards;
+      transform: translateY(0) rotateZ(0deg);
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(0) translateX(0) rotateZ(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) translateX(var(--x-move, 0px)) rotateZ(360deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">🏏 Retro Hand Cricket - Bot Mode</div>
+    <div class="character-container">
+      <div id="user-side" class="character-side"></div>
+      <div id="bot-side" class="character-side"></div>
+    </div>
+
+    <div id="game-phase">
+      <p id="game-phase-text">🎲 Press Toss to Begin</p>
+      <button id="toss-btn" class="btn">Toss</button>
+      <div id="toss-choice" class="hidden">
+        <p>Choose:</p>
+        <button class="btn toss-choice" data-choice="heads">Heads</button>
+        <button class="btn toss-choice" data-choice="tails">Tails</button>
+      </div>
+      <div id="bat-bowl-choice" class="hidden">
+        <p>You won the toss! Choose:</p>
+        <button class="btn batbowl" data-choice="bat">Bat</button>
+        <button class="btn batbowl" data-choice="bowl">Bowl</button>
+      </div>
+      <p id="toss-result"></p>
+    </div>
+
+    <div id="bat-bowl-phase" class="hidden">
+      <p id="turn-info"></p>
+      <div class="choice-panel">
+        <button class="btn number-btn" data-num="0">0</button>
+        <button class="btn number-btn" data-num="1">1</button>
+        <button class="btn number-btn" data-num="2">2</button>
+        <button class="btn number-btn" data-num="3">3</button>
+        <button class="btn number-btn" data-num="4">4</button>
+        <button class="btn number-btn" data-num="5">5</button>
+      </div>
+      <p id="bot-choice"></p>
+      <div class="score-panel">
+        <p id="score-info">YOU: 0 | BOT: 0</p>
+      </div>
+      <div class="score-history-panel">
+        <h3 style="font-size: 12px;">📜 Scoreboard History</h3>
+        <ul id="score-history" style="font-size: 10px; list-style: none; padding: 0; max-height: 120px; overflow-y: auto;"></ul>
+      </div>
+    </div>
+
+    <button id="reset-btn" class="btn hidden">⟲ Reset</button>
+  </div>
+
+  <div class="confetti" id="confetti"></div>
+
+  <script>
+    let userScore = 0, botScore = 0, userBatting = true;
+    let isFirstInnings = true, target = null, gameEnded = false;
+
+    const tossBtn = document.getElementById("toss-btn");
+    const tossChoice = document.getElementById("toss-choice");
+    const batBowlChoice = document.getElementById("bat-bowl-choice");
+    const tossResult = document.getElementById("toss-result");
+    const batBowlPhase = document.getElementById("bat-bowl-phase");
+    const turnInfo = document.getElementById("turn-info");
+    const scoreInfo = document.getElementById("score-info");
+    const botChoiceDisplay = document.getElementById("bot-choice");
+    const resetBtn = document.getElementById("reset-btn");
+    const scoreHistory = document.getElementById("score-history");
+    const confetti = document.getElementById("confetti");
+    const userSide = document.getElementById("user-side");
+    const botSide = document.getElementById("bot-side");
+
+    tossBtn.onclick = () => {
+      tossBtn.classList.add("hidden");
+      tossChoice.classList.remove("hidden");
+    };
+
+    document.querySelectorAll(".toss-choice").forEach(btn => {
+      btn.onclick = () => {
+        const userCall = btn.getAttribute("data-choice");
+        const coin = Math.random() < 0.5 ? "heads" : "tails";
+        const userWon = userCall === coin;
+
+        tossChoice.classList.add("hidden");
+
+        if (userWon) {
+          tossResult.textContent = `You won the toss! Coin: ${coin}`;
+          batBowlChoice.classList.remove("hidden");
+        } else {
+          tossResult.textContent = `Bot won the toss! Coin: ${coin}. Bot chose to bat.`;
+          userBatting = false;
+          startGame();
+        }
+      };
+    });
+
+    document.querySelectorAll(".batbowl").forEach(btn => {
+      btn.onclick = () => {
+        userBatting = btn.getAttribute("data-choice") === "bat";
+        batBowlChoice.classList.add("hidden");
+        startGame();
+      };
+    });
+
+    function startGame() {
+      tossResult.classList.remove("hidden");
+      batBowlPhase.classList.remove("hidden");
+      updateTurnInfo();
+      renderCharacters();
+    }
+
+    document.querySelectorAll(".number-btn").forEach(btn => {
+      btn.onclick = () => {
+        if (gameEnded) return;
+
+        renderCharacters();
+
+        const userNum = parseInt(btn.getAttribute("data-num"));
+        const botNum = Math.floor(Math.random() * 6);
+        botChoiceDisplay.textContent = `🤖 Bot chose: ${botNum}`;
+
+        const isBallFromBot = !userBatting;
+        const ballEl = document.getElementById("ball");
+        const batEl = document.getElementById("bat");
+
+        if (ballEl) {
+          ballEl.classList.add("bowl-anim");
+        }
+
+        setTimeout(() => {
+          if (batEl) batEl.classList.add("swing");
+
+          const li = document.createElement("li");
+          li.textContent = userBatting
+            ? `You: ${userNum} | Bot: ${botNum}${userNum === botNum ? " (OUT!)" : ""}`
+            : `Bot: ${botNum} | You: ${userNum}${userNum === botNum ? " (OUT!)" : ""}`;
+          scoreHistory.appendChild(li);
+
+          if (userNum === botNum) {
+  if (isFirstInnings) {
+    target = userBatting ? userScore + 1 : botScore + 1;
+    tossResult.textContent = `${userBatting ? "You" : "Bot"} OUT! Target is ${target}`;
+    isFirstInnings = false;
+    userBatting = !userBatting;
+    userScore = 0;
+    botScore = 0;
+    updateTurnInfo();
+  } else {
+    if (userBatting) {
+      tossResult.textContent = "😢 YOU LOSE!";
+    } else {
+      tossResult.textContent = "🎉 YOU WIN!";
+      showConfetti();
+    }
+    endGame();
+  }
+}
+
+          else {
+            if (userBatting) {
+              userScore += userNum;
+              if (!isFirstInnings && userScore >= target) {
+                tossResult.textContent = "🎉 YOU WON!";
+                showConfetti();
+                endGame();
+                return;
+              }
+            } else {
+              botScore += botNum;
+              if (!isFirstInnings && botScore >= target) {
+                tossResult.textContent = "😢 YOU LOSE!";
+                endGame();
+                return;
+              }
+            }
+          }
+          updateTurnInfo();
+        }, 400);
+      };
+    });
+
+    function updateTurnInfo() {
+      turnInfo.textContent = userBatting ? "🎮 Your Turn to Bat" : "🤖 Bot is Batting";
+      scoreInfo.textContent = `YOU: ${userScore} | BOT: ${botScore}`;
+      renderCharacters();
+    }
+
+    function endGame() {
+      gameEnded = true;
+      resetBtn.classList.remove("hidden");
+      batBowlPhase.classList.add("hidden");
+      document.getElementById("game-phase-text").textContent = "Press ⟲ Reset to play again";
+}
+
+
+    resetBtn.onclick = () => location.reload();
+
+  function showConfetti() {
+  for (let i = 0; i < 1000; i++) {
+    const div = document.createElement("div");
+    div.classList.add("confetti-piece");
+    div.style.left = Math.random() * 100 + "%";
+    div.style.setProperty("--hue", Math.random());
+    div.style.setProperty("--duration", `${2 + Math.random() * 2.5}s`);
+    div.style.setProperty("--x-move", `${(Math.random() - 0.5) * 300}px`);
+    confetti.appendChild(div);
+    setTimeout(() => div.remove(), 5000);
+  }
+}
+
+
+    function renderCharacters() {
+      const batsman = `
+        <div class="pixel-character">
+          <div class="head"><div class="hair"></div></div>
+          <div class="body"></div>
+          <div class="arm left-arm"></div>
+          <div class="arm right-arm"><div class="bat" id="bat"></div></div>
+          <div class="leg left-leg"></div>
+          <div class="leg right-leg"></div>
+        </div>`;
+      const bowler = `
+        <div class="pixel-character">
+          <div class="head"><div class="hair"></div></div>
+          <div class="body bowler"></div>
+          <div class="arm left-arm"></div>
+          <div class="arm right-arm"></div>
+          <div class="leg left-leg"></div>
+          <div class="leg right-leg"></div>
+          <div class="ball" id="ball"></div>
+        </div>`;
+      userSide.innerHTML = userBatting ? batsman : bowler;
+      botSide.innerHTML = userBatting ? bowler : batsman;
+    }
+  </script>
+</body>
+</html>

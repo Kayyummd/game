@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎮 Hand Cricket Lobby</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle, #000022 0%, #000010 100%);
+      color: #00fff7;
+      font-family: 'Press Start 2P', cursive;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: rgba(0,0,0,0.8);
+      padding: 30px;
+      border: 3px solid #00fff7;
+      box-shadow: 0 0 30px #00fff7;
+      text-align: center;
+      max-width: 450px;
+      width: 90%;
+    }
+    button {
+      background: black;
+      color: #00fff7;
+      border: 2px solid #00fff7;
+      margin: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+    }
+    button:hover {
+      background: #00fff7;
+      color: black;
+    }
+    p {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🎮 Lobby</h1>
+    <p>Room: <span id="room-code">--</span></p>
+    <p id="status">Waiting for player...</p>
+
+    <div id="toss-btns" style="display:none;">
+      <p>Select Head or Tail</p>
+      <button onclick="chooseToss('Head')">Head</button>
+      <button onclick="chooseToss('Tail')">Tail</button>
+    </div>
+
+    <div id="toss-result" style="display:none;">
+      <p id="toss-text"></p>
+    </div>
+
+    <div id="batbowl-btns" style="display:none;">
+      <p>Choose Bat or Bowl</p>
+      <button onclick="chooseBatBowl('Bat')">Bat</button>
+      <button onclick="chooseBatBowl('Bowl')">Bowl</button>
+    </div>
+  </div>
+
+  <script>
+    const socket = io('http://localhost:5000');
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    const isHost = params.get('host') === 'true';
+    let sid = null;
+
+    document.getElementById('room-code').innerText = room;
+
+    socket.emit('join_room', { room, host: isHost });
+
+    socket.on('connect', () => {
+      sid = socket.id;
+    });
+
+    socket.on('both_ready', () => {
+      document.getElementById('status').innerText = 'Both players joined!';
+      if (isHost) document.getElementById('toss-btns').style.display = 'block';
+    });
+
+    function chooseToss(choice) {
+      socket.emit('toss_choice', { room, choice });
+      document.getElementById('toss-btns').style.display = 'none';
+      document.getElementById('status').innerText = 'Waiting for toss...';
+    }
+
+    socket.on('toss_result', data => {
+      document.getElementById('status').innerText = '';
+      document.getElementById('toss-result').style.display = 'block';
+      document.getElementById('toss-text').innerText =
+        `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
+
+      if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
+        document.getElementById('batbowl-btns').style.display = 'block';
+      } else {
+        document.getElementById('status').innerText = 'Opponent is choosing Bat/Bowl...';
+      }
+    });
+
+    function chooseBatBowl(choice) {
+      socket.emit('bat_bowl_choice', { room, choice });
+      document.getElementById('batbowl-btns').style.display = 'none';
+      document.getElementById('status').innerText = 'Starting game...';
+    }
+
+    socket.on('game_start', () => {
+      window.location.href = `multiplayer_game.html?room=${room}`;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🏏 Multiplayer Hand Cricket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      height: 100%; background: black; color: #00fff7;
+      font-family: 'Press Start 2P', cursive;
+    }
+    .game-box {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85); padding: 30px;
+      border: 3px solid #00fff7;
+      box-shadow: 0 0 20px #00fff7;
+      text-align: center; width: 90%; max-width: 460px;
+    }
+    button {
+      margin: 6px; padding: 10px 16px;
+      border: 2px solid #00fff7;
+      background: black; color: #00fff7;
+      cursor: pointer; font-family: inherit;
+      font-size: 12px;
+    }
+    button:hover {
+      background: #00fff7; color: black;
+    }
+    #bg {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: -1;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <div class="game-box">
+    <p id="status">Waiting for opponent...</p>
+
+    <div id="toss-box" class="hidden">
+      <p>Choose Head or Tail:</p>
+      <button onclick="sendToss('Head')">Head</button>
+      <button onclick="sendToss('Tail')">Tail</button>
+    </div>
+
+    <div id="batbowl-box" class="hidden">
+      <p>You won the toss! Choose:</p>
+      <button onclick="chooseBatBowl('Bat')">Bat</button>
+      <button onclick="chooseBatBowl('Bowl')">Bowl</button>
+    </div>
+
+    <div id="play-buttons" class="hidden">
+      <p id="play-instruction">Choose your number:</p>
+      <div>
+        <button onclick="playNum(1)">1</button>
+        <button onclick="playNum(2)">2</button>
+        <button onclick="playNum(3)">3</button>
+        <button onclick="playNum(4)">4</button>
+        <button onclick="playNum(5)">5</button>
+        <button onclick="playNum(6)">6</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Background Animation ---
+    const bg = document.getElementById('bg');
+    const ctx = bg.getContext('2d');
+    let stars = [];
+
+    function resize() {
+      bg.width = window.innerWidth;
+      bg.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize); resize();
+
+    for (let i = 0; i < 100; i++) {
+      stars.push({
+        x: Math.random() * bg.width,
+        y: Math.random() * bg.height / 2,
+        r: Math.random() * 1.5 + 0.5,
+        d: Math.random() * 0.3 + 0.1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, bg.width, bg.height);
+      stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, 2 * Math.PI);
+        ctx.fillStyle = "#00fff7";
+        ctx.fill();
+        s.y += s.d;
+        if (s.y > bg.height / 2) {
+          s.y = 0;
+          s.x = Math.random() * bg.width;
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- Multiplayer Game Logic ---
+    const socket = io('http://localhost:5000'); // Update if deployed elsewhere
+    const room = new URLSearchParams(window.location.search).get('room');
+    const isHost = new URLSearchParams(window.location.search).get('host') === 'true';
+    let mySocketId = "";
+
+    socket.on("connect", () => {
+      mySocketId = socket.id;
+      socket.emit("join_room", { room, host: isHost });
+    });
+
+    socket.on("both_ready", () => {
+      document.getElementById("status").innerText = "Both players connected!";
+      if (isHost) {
+        document.getElementById("toss-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "Choose Head or Tail:";
+      }
+    });
+
+    function sendToss(choice) {
+      socket.emit("toss_choice", { room, choice });
+      document.getElementById("toss-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for toss result...";
+    }
+
+    socket.on("toss_result", (data) => {
+      const won = (data.winner === "host" && isHost) || (data.winner === "guest" && !isHost);
+      document.getElementById("status").innerText = `Toss Result: ${data.result}. ${data.winner.toUpperCase()} won.`;
+
+      if (won) {
+        document.getElementById("batbowl-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "You won the toss! Choose Bat or Bowl";
+      }
+    });
+
+    function chooseBatBowl(choice) {
+      socket.emit("bat_bowl_choice", { room, choice });
+      document.getElementById("batbowl-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for game to start...";
+    }
+
+    socket.on("game_start", (data) => {
+      const batting = data.bat_first_sid === mySocketId;
+      document.getElementById("play-buttons").classList.remove("hidden");
+      document.getElementById("status").innerText = batting ? "You are batting" : "You are bowling";
+    });
+
+    function playNum(n) {
+      socket.emit("player_move", { room, move: n });
+      document.getElementById("play-buttons").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for opponent...";
+    }
+
+    socket.on("round_result", data => {
+      if (data.type === "out") {
+        document.getElementById("status").innerText = `OUT! Both played ${data.num}`;
+      } else {
+        const otherId = Object.keys(data.moves).find(id => id !== mySocketId);
+        const myMove = data.moves[mySocketId];
+        const opponentMove = data.moves[otherId];
+        document.getElementById("status").innerText = `You: ${myMove} | Opponent: ${opponentMove}`;
+      }
+      document.getElementById("play-buttons").classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
