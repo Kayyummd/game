@@ -89,17 +89,20 @@
 <body>
   <div class="container">
     <div class="game-box">
-      <p id="status">🔹 Connecting...</p>
+      <p id="status">🕹️ Waiting for opponent...</p>
+
       <div id="toss-box" class="hidden">
         <p>🪙 Choose Head or Tail:</p>
         <button onclick="sendToss('Head')">🪙 Head</button>
         <button onclick="sendToss('Tail')">🐍 Tail</button>
       </div>
+
       <div id="batbowl-box" class="hidden">
         <p>🏏 You won the toss! Choose:</p>
         <button onclick="chooseBatBowl('Bat')">🗡️ Bat</button>
         <button onclick="chooseBatBowl('Bowl')">🛡️ Bowl</button>
       </div>
+
       <div id="play-buttons" class="hidden">
         <p>🎯 Choose your number:</p>
         <div>
@@ -111,15 +114,18 @@
           <button onclick="playNum(5)">5</button>
         </div>
       </div>
+
       <div id="scoreboard">
         <h3>📜 Scoreboard History</h3>
         <ul id="history" style="list-style: none; padding-left: 0;"></ul>
       </div>
+
       <div id="game-over">
         <h3 id="result-msg">Game Over!</h3>
         <button onclick="restartGame()">🔄 Restart</button>
       </div>
     </div>
+
     <div class="chat-box">
       <h3>💬 Chat</h3>
       <div id="messages"></div>
@@ -127,6 +133,7 @@
       <button onclick="sendMsg()">Send</button>
     </div>
   </div>
+
   <script>
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
