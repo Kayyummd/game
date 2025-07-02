@@ -70,6 +70,10 @@ def game():
 def game_bot():
     return render_template("game_bot.html")
 
+@app.route("/multiplayer_game")
+def multiplayer_game():
+    return render_template("multiplayer_game.html")
+
 
 # --- Game State Management ---
 rooms = {}
