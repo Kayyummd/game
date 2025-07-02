@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     html, body {
       margin: 0; padding: 0;
@@ -38,55 +39,36 @@
       background: #ffcc00; color: black;
     }
     .hidden { display: none; }
-    #scoreboard {
+    #scoreboard, #chat-box {
       margin-top: 20px;
       text-align: left;
-      max-height: 150px;
-      overflow-y: auto;
+    }
+    #history, #messages {
       font-size: 10px;
       border: 2px dashed #00ffcc;
       padding: 8px;
       background-color: #111;
       color: #00ffcc;
-    }
-    #chat-box {
-      margin-top: 20px;
-      text-align: left;
-    }
-    #messages {
-      border: 2px dashed #00ffcc;
-      background-color: #111;
-      color: #00ffcc;
-      height: 100px;
       overflow-y: auto;
-      font-size: 10px;
-      padding: 5px;
     }
+    #history { max-height: 150px; }
+    #messages { height: 100px; }
     #msg-input {
       width: 70%;
       padding: 5px;
-      font-family: 'Press Start 2P', cursive;
+      font-family: inherit;
       font-size: 10px;
     }
-    #end-screen {
-      background-color: #111;
-      color: #00ffcc;
-      border: 3px dashed #ffcc00;
+    #game-over {
+      display: none;
       padding: 20px;
+      background: #000;
+      border: 2px dashed red;
       margin-top: 20px;
-    }
-    canvas#confetti {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 999;
-      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="confetti"></canvas>
   <div class="game-box">
     <p id="status">🕹️ Waiting for opponent...</p>
 
@@ -103,7 +85,7 @@
     </div>
 
     <div id="play-buttons" class="hidden">
-      <p id="play-instruction">🎯 Choose your number:</p>
+      <p>🎯 Choose your number:</p>
       <div>
         <button onclick="playNum(0)">0</button>
         <button onclick="playNum(1)">1</button>
@@ -126,18 +108,18 @@
       <button onclick="sendMsg()">Send</button>
     </div>
 
-    <div id="end-screen" class="hidden">
-      <h2 id="winner-msg"></h2>
-      <button onclick="restartGame()">🔄 Restart Game</button>
+    <div id="game-over">
+      <h3 id="result-msg">Game Over!</h3>
+      <button onclick="restartGame()">🔄 Restart</button>
     </div>
   </div>
 
   <script>
     const socket = io();
-    const room = new URLSearchParams(window.location.search).get('room');
-    const isHost = new URLSearchParams(window.location.search).get('host') === 'true';
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room');
+    const isHost = urlParams.get('host') === 'true';
     let mySocketId = "";
-    let opponentName = "Opponent";
 
     socket.on("connect", () => {
       mySocketId = socket.id;
@@ -189,82 +171,48 @@
     }
 
     socket.on("round_result", data => {
-      const otherId = Object.keys(data.moves).find(id => id !== mySocketId);
-      const myMove = data.moves[mySocketId];
-      const opponentMove = data.moves[otherId];
-
       const list = document.getElementById("history");
       const li = document.createElement("li");
-      li.textContent = data.type === "out"
-        ? `💥 OUT! Both played ${data.num}`
-        : `You: ${myMove} | Opponent: ${opponentMove}`;
-      list.appendChild(li);
-
-      // Game end simulation (you can make this condition dynamic)
       if (data.type === "out") {
-        showEndScreen(myMove, opponentMove);
+        li.textContent = `💥 OUT! Both played ${data.num}`;
       } else {
-        document.getElementById("play-buttons").classList.remove("hidden");
+        const myMove = data.moves[mySocketId];
+        const opponentMove = Object.values(data.moves).find((m, i) => i !== mySocketId);
+        li.textContent = `You: ${myMove} | Opponent: ${opponentMove}`;
       }
+      list.appendChild(li);
+      document.getElementById("play-buttons").classList.remove("hidden");
     });
 
+    // 🔥 Chat
     function sendMsg() {
       const input = document.getElementById("msg-input");
       const msg = input.value.trim();
       if (!msg) return;
-      socket.emit("chat", { room, msg });
+      socket.emit("send_message", { room, message: msg, username: "You" });
       input.value = "";
     }
 
-    socket.on("chat", ({ msg }) => {
+    socket.on("receive_message", ({ username, message }) => {
       const box = document.getElementById("messages");
       const line = document.createElement("div");
-      line.textContent = msg;
+      line.textContent = `${username}: ${message}`;
       box.appendChild(line);
       box.scrollTop = box.scrollHeight;
     });
 
-    function showEndScreen(myScore, opponentScore) {
-      document.getElementById("play-buttons").classList.add("hidden");
-      document.getElementById("status").innerText = "🏁 Game Over!";
-      document.getElementById("end-screen").classList.remove("hidden");
-      const winner = myScore > opponentScore ? "🎉 Congratulations! You Won!" : `😓 You lost to ${opponentName}`;
-      document.getElementById("winner-msg").innerText = winner;
-      triggerConfetti();
-    }
+    // 🎉 Game Over
+    socket.on("game_over", ({ winner_sid }) => {
+      const msg = winner_sid === mySocketId
+        ? "🎉 You Won! Champion 🏆"
+        : "😢 You Lost! Better luck next time";
+      document.getElementById("result-msg").innerText = msg;
+      document.getElementById("game-over").style.display = "block";
+      confetti(); // simple burst
+    });
 
     function restartGame() {
-      location.reload();
-    }
-
-    function triggerConfetti() {
-      const canvas = document.getElementById("confetti");
-      const ctx = canvas.getContext("2d");
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      const pieces = [];
-      for (let i = 0; i < 150; i++) {
-        pieces.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height - canvas.height,
-          speed: Math.random() * 5 + 2,
-          radius: Math.random() * 5 + 2,
-          color: `hsl(${Math.random() * 360}, 100%, 50%)`
-        });
-      }
-      function drawConfetti() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        pieces.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
-          ctx.fillStyle = p.color;
-          ctx.fill();
-          p.y += p.speed;
-          if (p.y > canvas.height) p.y = 0;
-        });
-        requestAnimationFrame(drawConfetti);
-      }
-      drawConfetti();
+      window.location.reload();
     }
   </script>
 </body>
