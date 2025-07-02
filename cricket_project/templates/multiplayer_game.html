@@ -20,25 +20,23 @@
     }
     .container {
       display: flex;
-      flex-direction: row;
-      width: 95%;
-      max-width: 1000px;
+      gap: 20px;
     }
     .game-box {
-      flex: 2;
       background: rgba(0, 0, 0, 0.85);
       border: 4px double #ffcc00;
       box-shadow: 0 0 25px #00ffcc;
+      width: 700px;
       padding: 20px;
       text-align: center;
     }
     .chat-box {
-      flex: 1;
-      margin-left: 20px;
-      background: rgba(0, 0, 0, 0.85);
-      border: 4px double #ffcc00;
-      box-shadow: 0 0 25px #00ffcc;
-      padding: 20px;
+      background: #000;
+      border: 4px double #00ffcc;
+      width: 300px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
     }
     button {
       margin: 6px; padding: 10px 16px;
@@ -52,18 +50,15 @@
       background: #ffcc00; color: black;
     }
     .hidden { display: none; }
-    #scoreboard {
-      margin-top: 20px;
-      text-align: center;
-    }
     #history {
       font-size: 10px;
       border: 2px dashed #00ffcc;
       padding: 8px;
       background-color: #111;
       color: #00ffcc;
-      overflow-y: auto;
       max-height: 150px;
+      overflow-y: auto;
+      text-align: left;
     }
     #messages {
       font-size: 10px;
@@ -71,14 +66,16 @@
       padding: 8px;
       background-color: #111;
       color: #00ffcc;
+      height: 100px;
       overflow-y: auto;
-      height: 200px;
+      flex: 1;
     }
     #msg-input {
-      width: 70%;
+      width: 100%;
       padding: 5px;
       font-family: inherit;
       font-size: 10px;
+      margin-top: 5px;
     }
     #game-over {
       display: none;
@@ -93,16 +90,19 @@
   <div class="container">
     <div class="game-box">
       <p id="status">🕹️ Waiting for opponent...</p>
+
       <div id="toss-box" class="hidden">
         <p>🪙 Choose Head or Tail:</p>
         <button onclick="sendToss('Head')">🪙 Head</button>
         <button onclick="sendToss('Tail')">🐍 Tail</button>
       </div>
+
       <div id="batbowl-box" class="hidden">
         <p>🏏 You won the toss! Choose:</p>
         <button onclick="chooseBatBowl('Bat')">🗡️ Bat</button>
         <button onclick="chooseBatBowl('Bowl')">🛡️ Bowl</button>
       </div>
+
       <div id="play-buttons" class="hidden">
         <p>🎯 Choose your number:</p>
         <div>
@@ -114,15 +114,18 @@
           <button onclick="playNum(5)">5</button>
         </div>
       </div>
+
       <div id="scoreboard">
         <h3>📜 Scoreboard History</h3>
         <ul id="history" style="list-style: none; padding-left: 0;"></ul>
       </div>
+
       <div id="game-over">
         <h3 id="result-msg">Game Over!</h3>
         <button onclick="restartGame()">🔄 Restart</button>
       </div>
     </div>
+
     <div class="chat-box">
       <h3>💬 Chat</h3>
       <div id="messages"></div>
@@ -135,8 +138,8 @@
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
     const room = urlParams.get('room');
+    const username = urlParams.get('username') || 'Player';
     const isHost = urlParams.get('host') === 'true';
-    const username = localStorage.getItem('username') || prompt("Enter your name");
     let mySocketId = "";
 
     socket.on("connect", () => {
@@ -144,7 +147,7 @@
       socket.emit("join_room", { room, host: isHost, username });
     });
 
-    socket.on("both_ready", () => {
+    socket.on("both_ready", (data) => {
       document.getElementById("status").innerText = "🎮 Both players connected!";
       if (isHost) {
         document.getElementById("toss-box").classList.remove("hidden");
@@ -194,8 +197,11 @@
         li.textContent = `💥 OUT! Both played ${data.num}`;
       } else {
         const myMove = data.moves[mySocketId];
-        const opponentMove = Object.entries(data.moves).find(([id]) => id !== mySocketId)[1];
-        li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
+        const opponentId = Object.keys(data.moves).find(id => id !== mySocketId);
+        const opponentMove = data.moves[opponentId];
+        const myName = data.usernames[mySocketId] || "You";
+        const oppName = data.usernames[opponentId] || "Opponent";
+        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove}`;
       }
       list.appendChild(li);
       document.getElementById("play-buttons").classList.remove("hidden");
@@ -217,17 +223,17 @@
       box.scrollTop = box.scrollHeight;
     });
 
-    socket.on("game_over", ({ winner_sid }) => {
-      const msg = winner_sid === mySocketId
+    socket.on("game_over", ({ winner_name, loser_name }) => {
+      const msg = (winner_name === username)
         ? "🎉 You Won! Champion 🏆"
-        : "😢 You Lost! Better luck next time";
+        : `😢 You Lost! Winner: ${winner_name}`;
       document.getElementById("result-msg").innerText = msg;
       document.getElementById("game-over").style.display = "block";
       confetti();
     });
 
     function restartGame() {
-      window.location.reload();
+      socket.emit("restart_game", { room });
     }
   </script>
 </body>
