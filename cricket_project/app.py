@@ -57,10 +57,14 @@ def login():
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
-# --- Serve HTML Page ---
+# --- Serve HTML Pages ---
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route("/game")
+def game():
+    return render_template("game.html")
 
 # --- Game State Management ---
 rooms = {}
