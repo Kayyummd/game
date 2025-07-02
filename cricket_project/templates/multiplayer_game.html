@@ -177,14 +177,13 @@
         li.textContent = `💥 OUT! Both played ${data.num}`;
       } else {
         const myMove = data.moves[mySocketId];
-        const opponentMove = Object.values(data.moves).find((m, i) => i !== mySocketId);
+        const opponentMove = Object.entries(data.moves).find(([id, _]) => id !== mySocketId)[1];
         li.textContent = `You: ${myMove} | Opponent: ${opponentMove}`;
       }
       list.appendChild(li);
       document.getElementById("play-buttons").classList.remove("hidden");
     });
 
-    // 🔥 Chat
     function sendMsg() {
       const input = document.getElementById("msg-input");
       const msg = input.value.trim();
@@ -201,14 +200,13 @@
       box.scrollTop = box.scrollHeight;
     });
 
-    // 🎉 Game Over
     socket.on("game_over", ({ winner_sid }) => {
       const msg = winner_sid === mySocketId
         ? "🎉 You Won! Champion 🏆"
         : "😢 You Lost! Better luck next time";
       document.getElementById("result-msg").innerText = msg;
       document.getElementById("game-over").style.display = "block";
-      confetti(); // simple burst
+      confetti();
     });
 
     function restartGame() {
