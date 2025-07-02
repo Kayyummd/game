@@ -66,6 +66,11 @@ def home():
 def game():
     return render_template("game.html")
 
+@app.route("/game_bot")
+def game_bot():
+    return render_template("game_bot.html")
+
+
 # --- Game State Management ---
 rooms = {}
 
