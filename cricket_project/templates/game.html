@@ -43,7 +43,7 @@
       const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       alert("🔑 Room Created: " + roomCode);
       // You can redirect to a multiplayer room handler page with roomCode
-      window.location.href = "room.html?room=" + roomCode + "&host=true";
+      window.location.href = "/room?room=" + roomCode + "&host=true";
     }
 
     function joinRoom() {
@@ -56,7 +56,7 @@
         document.getElementById("message").innerText = "Please enter a valid room code.";
         return;
       }
-      window.location.href = "room.html?room=" + roomCode;
+      window.location.href = "/room?room=" + roomCode;
     }
   </script>
 </body>
