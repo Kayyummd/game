@@ -73,10 +73,10 @@ def game_bot():
 @app.route("/room")
 def room():
     return render_template("room.html")
+
 @app.route("/multiplayer_game.html")
 def multiplayer_game():
     return render_template("multiplayer_game.html")
-
 
 # --- Game State Management ---
 rooms = {}
@@ -96,7 +96,8 @@ def handle_join(data):
             "toss_result": None,
             "toss_winner": None,
             "bat_first_sid": None,
-            "moves": {}
+            "moves": {},
+            "chat": []
         }
 
     r = rooms[room]
@@ -166,6 +167,17 @@ def handle_player_move(data):
             emit("round_result", {"type": "continue", "moves": {p1: m1, p2: m2}}, room=room)
 
         r["moves"] = {}
+
+@socketio.on("send_message")
+def handle_send_message(data):
+    room = data["room"]
+    username = data.get("username", "Player")
+    message = data["message"]
+    r = rooms.get(room)
+    if not r:
+        return
+    r["chat"].append({"username": username, "message": message})
+    emit("receive_message", {"username": username, "message": message}, room=room)
 
 # --- Run Server ---
 if __name__ == "__main__":
