@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Retro Hand Cricket - Login</title>
-  <link rel="stylesheet" href="static/style.css" />
+
+  <!-- ✅ Use url_for for static CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -24,6 +26,7 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <!-- ✅ Use url_for for static JS -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
