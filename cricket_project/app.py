@@ -117,7 +117,12 @@ def handle_join(data):
     join_room(room)
 
     if r["host"] and r["guest"] and len(r["players"]) == 2:
-        emit("both_ready", room=room)
+        emit("both_ready", {
+            "usernames": {
+                r["host"]: r["names"].get(r["host"], "Host"),
+                r["guest"]: r["names"].get(r["guest"], "Guest")
+            }
+        }, room=room)
 
 @socketio.on("toss_choice")
 def handle_toss(data):
@@ -150,7 +155,10 @@ def handle_bat_bowl(data):
     else:
         r["bat_first_sid"] = next(p for p in r["players"] if p != sid)
 
-    emit("game_start", {"bat_first_sid": r["bat_first_sid"]}, room=room)
+    emit("game_start", {
+        "bat_first_sid": r["bat_first_sid"],
+        "usernames": r["names"]
+    }, room=room)
 
 @socketio.on("player_move")
 def handle_player_move(data):
@@ -172,7 +180,11 @@ def handle_player_move(data):
 
         if m1 == m2:
             r["outs"] += 1
-            emit("round_result", {"type": "out", "num": m1}, room=room)
+            emit("round_result", {
+                "type": "out",
+                "num": m1,
+                "usernames": r["names"]
+            }, room=room)
 
             if r["innings"] == 1:
                 r["innings"] = 2
@@ -195,7 +207,11 @@ def handle_player_move(data):
                     "loser_name": r["names"].get(loser, "Player")
                 }, room=room)
         else:
-            emit("round_result", {"type": "continue", "moves": {p1: m1, p2: m2}}, room=room)
+            emit("round_result", {
+                "type": "continue",
+                "moves": {p1: m1, p2: m2},
+                "usernames": r["names"]
+            }, room=room)
 
         r["moves"] = {}
 
@@ -220,7 +236,10 @@ def handle_restart(data):
     r["scores"] = {}
     r["outs"] = 0
     r["innings"] = 1
-    emit("game_start", {"bat_first_sid": r["bat_first_sid"]}, room=room)
+    emit("game_start", {
+        "bat_first_sid": r["bat_first_sid"],
+        "usernames": r["names"]
+    }, room=room)
 
 # --- Run Server ---
 if __name__ == "__main__":
