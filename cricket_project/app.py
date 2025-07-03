@@ -171,15 +171,15 @@ def handle_player_move(data):
         batter_sid = r["bat_first_sid"] if r["innings"] == 1 else next(p for p in r["players"] if p != r["bat_first_sid"])
         r["scores"][batter_sid] = r["scores"].get(batter_sid, 0) + (m1 if batter_sid == p1 else m2)
 
-        if m1 == m2:
-            r["outs"] += 1
-            emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
-            if r["innings"] == 1:
-                r["target"] = r["scores"].get(batter_sid, 0) + 1
-                r["innings"] = 2
-                r["outs"] = 0
-                r["moves"] = {}
-                return
+     elif m1 == m2 and r["innings"] == 2:
+         winner = p2 if r["scores"][p2] > r["scores"][p1] else p1
+         r["target"] = None
+         emit("round_result", {...}, room=room)
+         emit("game_over", {
+        "winner_sid": winner,
+        "winner_name": r["names"][winner]
+         }, room=room)
+
             else:
                 p1_score = r["scores"].get(p1, 0)
                 p2_score = r["scores"].get(p2, 0)
