@@ -65,12 +65,6 @@
     socket.emit('join_room', { room, host: isHost, username });
   });
 
-  // Lobby & toss logic unchanged...
-  socket.on('both_ready', () => { /* ... */ });
-  function chooseToss(choice){ /* ... */ }
-  socket.on('toss_result', data => { /* ... */ });
-  function chooseBatBowl(choice){ /* ... */ }
-
   socket.on("game_start", data => {
     document.querySelector(".lobby").style.display = "none";
     document.getElementById("game").style.display = "flex";
@@ -116,7 +110,8 @@
     const oppName = data.usernames[opponentId];
 
     if(data.type === "out"){
-      li.textContent = `💥 OUT! Both played ${data.num}`;
+      const outMsg = isMyTurnToBat ? "💥 You're OUT!" : "💥 Opponent is OUT!";
+      li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove} – ${outMsg}`;
       historyList.appendChild(li);
 
       if(innings === 1){
@@ -126,7 +121,7 @@
         historyList.appendChild(document.createElement("hr"));
         updateGameStatus();
       } else {
-        const won = !isMyTurnToBat;
+        const won = !isMyTurnToBat;  // if you’re bowling and got them out, you win
         endGame(won);
         return;
       }
@@ -169,9 +164,9 @@
     window.confetti({ particleCount:200, spread:90, origin:{ y:0.6 } });
   }
 
-  // Chat logic unchanged
-  function sendMsg(){ /* ... */ }
-  socket.on("receive_message", ({ username, message }) => { /* ... */ });
-  </script>
+  function sendMsg(){ /* Chat logic */ }
+  socket.on("receive_message", ({ username, message }) => { /* Chat logic */ });
+</script>
+
 </body>
 </html>
