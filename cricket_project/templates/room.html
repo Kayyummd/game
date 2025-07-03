@@ -157,8 +157,11 @@
   const username = params.get('username') || 'Player';
   const isHost = params.get('host') === 'true';
   let sid = "";
+  let myScore = 0;
   let opponentScore = 0;
-  let targetScore = null;
+  let isMyTurnToBat = false;
+  let innings = 1;
+  let target = null;
 
   document.getElementById("room-code").innerText = room;
 
@@ -199,10 +202,29 @@
   socket.on("game_start", (data) => {
     document.querySelector(".lobby").style.display = "none";
     document.getElementById("game").style.display = "flex";
-    const batting = data.bat_first_sid === sid;
-    document.getElementById("game-status").innerText = batting ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+
+    isMyTurnToBat = data.bat_first_sid === sid;
+    innings = 1;
+    myScore = 0;
+    opponentScore = 0;
+    target = null;
+
+    document.getElementById("history").innerHTML = "";
+    updateStatus();
     document.getElementById("play-buttons").classList.remove("hidden");
   });
+
+  function updateStatus() {
+    if (innings === 1) {
+      document.getElementById("game-status").innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+    } else {
+      if (isMyTurnToBat) {
+        document.getElementById("game-status").innerText = `🏏 Second Innings (Batting) – Target: ${target}`;
+      } else {
+        document.getElementById("game-status").innerText = `🥎 Second Innings (Bowling) – Defend ${target}`;
+      }
+    }
+  }
 
   function playNum(n) {
     socket.emit("player_move", { room, move: n });
@@ -214,33 +236,55 @@
     const list = document.getElementById("history");
     const li = document.createElement("li");
 
+    const myMove = data.moves[sid];
+    const opponentId = Object.keys(data.moves).find(id => id !== sid);
+    const opponentMove = data.moves[opponentId];
+
     if (data.type === "out") {
       li.textContent = `💥 OUT! Both played ${data.num}`;
 
-      // Save opponent score to calculate target
-      const scores = Object.values(data.usernames).map(u => u === username ? sid : null);
-      const p1 = Object.keys(data.usernames)[0];
-      const p2 = Object.keys(data.usernames)[1];
-
-      if (targetScore === null && data.usernames[p1] && data.usernames[p2]) {
-        const myId = sid;
-        const opponentId = p1 === myId ? p2 : p1;
-        opponentScore = parseInt(document.getElementById("history").getAttribute("data-score")) || 0;
-        targetScore = opponentScore + 1;
-        const info = document.createElement("li");
-        info.textContent = `🎯 Target: ${targetScore} runs`;
-        list.appendChild(info);
+      if (innings === 1) {
+        // End of 1st innings → switch roles and set target
+        innings = 2;
+        isMyTurnToBat = !isMyTurnToBat;
+        target = myScore + 1;
+        const targetMsg = document.createElement("li");
+        targetMsg.textContent = `🎯 Target is ${target}`;
+        list.appendChild(targetMsg);
+        updateStatus();
+      } else {
+        // End of 2nd innings by out → declare winner
+        const youLost = myScore < target;
+        const winnerMsg = youLost ? "😢 You Lost!" : "🎉 You Won! 🏆";
+        document.getElementById("game-status").innerText = winnerMsg;
+        if (!youLost) confetti();
       }
 
     } else {
-      const myMove = data.moves[sid];
-      const opponentId = Object.keys(data.moves).find(id => id !== sid);
-      const opponentMove = data.moves[opponentId];
       li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
+
+      // Update score
+      if (isMyTurnToBat) {
+        myScore += myMove;
+        if (innings === 2 && myScore >= target) {
+          document.getElementById("game-status").innerText = "🎉 You Won! 🏆";
+          confetti();
+          document.getElementById("play-buttons").classList.add("hidden");
+          return;
+        }
+      } else {
+        opponentScore += opponentMove;
+        if (innings === 2 && opponentScore >= target) {
+          document.getElementById("game-status").innerText = "😢 You Lost!";
+          document.getElementById("play-buttons").classList.add("hidden");
+          return;
+        }
+      }
     }
 
     list.appendChild(li);
     document.getElementById("play-buttons").classList.remove("hidden");
+    updateStatus();
   });
 
   function sendMsg() {
@@ -265,10 +309,10 @@
       ? "🎉 You Won! 🏆"
       : `😢 You Lost! Winner: ${winner_name}`;
     document.getElementById("game-status").innerText = msg;
-
     if (isWinner) confetti();
   });
 </script>
+
 
 </body>
 </html>
