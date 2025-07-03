@@ -234,9 +234,12 @@
     const myMove = data.moves[sid];
     const opponentId = Object.keys(data.moves).find(id => id !== sid);
     const opponentMove = data.moves[opponentId];
+    const myName = data.usernames[sid] || "You";
+    const opponentName = data.usernames[opponentId] || "Opponent";
 
     if (data.type === "out") {
       li.textContent = `💥 OUT! Both played ${data.num}`;
+      list.appendChild(li);
       if (innings === 1) {
         target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
         innings = 2;
@@ -250,7 +253,8 @@
         return;
       }
     } else {
-      li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
+      li.textContent = `${myName}: ${myMove} | ${opponentName}: ${opponentMove}`;
+      list.appendChild(li);
       if (isMyTurnToBat) {
         myScore += myMove;
         if (innings === 2 && myScore >= target) {
@@ -266,7 +270,6 @@
       }
     }
 
-    list.appendChild(li);
     document.getElementById("play-buttons").classList.remove("hidden");
     updateGameStatus();
   });
