@@ -206,7 +206,8 @@ def handle_send_message(data):
     r = rooms.get(room)
     if not r:
         return
-    username = r["names"].get(sid, "Player")
+    # Trust username from data OR fallback to names
+    username = data.get("username") or r["names"].get(sid, "Player")
     message = data["message"]
     r["chat"].append({"username": username, "message": message})
     emit("receive_message", {"username": username, "message": message}, room=room)
