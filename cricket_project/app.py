@@ -102,7 +102,8 @@ def handle_join(data):
             "scores": {},
             "innings": 1,
             "outs": 0,
-            "chat": []
+            "chat": [],
+            "target": None
         }
 
     r = rooms[room]
@@ -172,12 +173,12 @@ def handle_player_move(data):
 
         if m1 == m2:
             r["outs"] += 1
-            emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
-
             if r["innings"] == 1:
+                r["target"] = r["scores"].get(batter_sid, 0) + 1
                 r["innings"] = 2
                 r["outs"] = 0
                 r["moves"] = {}
+                emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
                 return
             else:
                 p1_score = r["scores"].get(p1, 0)
@@ -188,14 +189,20 @@ def handle_player_move(data):
                     winner, loser = p2, p1
                 else:
                     winner = loser = None  # Tie
+                emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
                 emit("game_over", {
                     "winner": winner,
                     "loser": loser,
-                    "winner_name": r["names"].get(winner, "Player"),
-                    "loser_name": r["names"].get(loser, "Player")
+                    "winner_name": r["names"].get(winner, "Player") if winner else "Tie",
+                    "loser_name": r["names"].get(loser, "Player") if loser else "Tie"
                 }, room=room)
         else:
-            emit("round_result", {"type": "continue", "moves": {p1: m1, p2: m2}, "usernames": r["names"]}, room=room)
+            emit("round_result", {
+                "type": "continue",
+                "moves": {p1: m1, p2: m2},
+                "usernames": r["names"],
+                "target": r["target"]
+            }, room=room)
 
         r["moves"] = {}
 
@@ -206,7 +213,6 @@ def handle_send_message(data):
     r = rooms.get(room)
     if not r:
         return
-    # Trust username from data OR fallback to names
     username = data.get("username") or r["names"].get(sid, "Player")
     message = data["message"]
     r["chat"].append({"username": username, "message": message})
@@ -222,6 +228,7 @@ def handle_restart(data):
     r["scores"] = {}
     r["outs"] = 0
     r["innings"] = 1
+    r["target"] = None
     emit("game_start", {"bat_first_sid": r["bat_first_sid"], "usernames": r["names"]}, room=room)
 
 # --- Run Server ---
