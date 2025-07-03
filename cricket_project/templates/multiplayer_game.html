@@ -96,36 +96,28 @@
     const username = params.get('username') || 'Player';
     const isHost = params.get('host') === 'true';
 
-    let sid = "";
-    let innings = 1;
+    let sid = "", innings = 1;
     let myScore = 0, opponentScore = 0;
-    let isMyTurnToBat = false;
-    let target = null;
-    let gameEnded = false;
+    let isMyTurnToBat = false, target = null, gameEnded = false;
+    let usernames = {};
 
     const targetDisplay = document.getElementById("target-display");
     const gameStatus = document.getElementById("game-status");
     const playButtons = document.getElementById("play-buttons");
     const historyList = document.getElementById("history");
     const resetBtn = document.getElementById("reset-btn");
-    const confettiEl = document.getElementById("confetti");
 
     socket.on('connect', () => {
       sid = socket.id;
       socket.emit('join_room', { room, host: isHost, username });
     });
-    socket.on("game_over", data => {
-      const youWon = data.winner_sid === sid;
-      endGame(youWon);
-    });
-
 
     socket.on("game_start", data => {
+      usernames = data.usernames;
       document.getElementById("game").style.display = "flex";
       isMyTurnToBat = data.bat_first_sid === sid;
       innings = 1;
-      myScore = 0;
-      opponentScore = 0;
+      myScore = opponentScore = 0;
       target = null;
       gameEnded = false;
       historyList.innerHTML = "";
@@ -134,7 +126,7 @@
       playButtons.classList.remove("hidden");
     });
 
-    function updateGameStatus(){
+    function updateGameStatus() {
       if (innings === 1) {
         gameStatus.innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
         targetDisplay.style.display = "none";
@@ -157,39 +149,48 @@
     socket.on("round_result", data => {
       const myMove = data.moves[sid];
       const opponentSid = Object.keys(data.moves).find(id => id !== sid);
-  
+      const opponentMove = data.moves[opponentSid];
+      const myName = usernames[sid] || 'You';
+      const oppName = usernames[opponentSid] || 'Opponent';
+
       if (data.type === "out") {
-        showHistory(`💥 OUT! Both played ${data.num}`);
-    
-      if (innings === 1) {
-        // Compute target and switch roles
-      target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
-      innings = 2;
-      isMyTurnToBat = !isMyTurnToBat;
-      showHistory(`🎯 Target: ${target}`);
-      updateStatus();
-    } else {
-      // Out in 2nd innings → game over
-      const youWin = !isMyTurnToBat;
-      endGame(youWin);
+        showHistory(`💥 OUT! ${myName} & ${oppName} both played ${myMove}`);
+        if (innings === 1) {
+          target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
+          innings = 2;
+          isMyTurnToBat = !isMyTurnToBat;
+          showHistory(`🎯 Target is ${target}`);
+          updateGameStatus();
+        } else {
+          endGame(!isMyTurnToBat); // Opponent bowled you out
+        }
+        return;
+      }
+
+      // Show score
+      showHistory(`${myName}: ${myMove} | ${oppName}: ${opponentMove}`);
+      if (isMyTurnToBat) {
+        myScore += myMove;
+        if (innings === 2 && myScore >= target) return endGame(true);
+      } else {
+        opponentScore += opponentMove;
+        if (innings === 2 && opponentScore >= target) return endGame(false);
+      }
+
+      playButtons.classList.remove("hidden");
+      updateGameStatus();
+    });
+
+    socket.on("game_over", data => {
+      const youWon = data.winner_sid === sid;
+      endGame(youWon);
+    });
+
+    function showHistory(text) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      historyList.appendChild(li);
     }
-    return;
-  }
-  
-  // Normal scoring
-  showHistory(`${username}: ${myMove} | Opponent: ${data.moves[opponentSid]}`);
-  if (isMyTurnToBat) {
-    myScore += myMove;
-    if (innings === 2 && myScore >= target) return endGame(true);
-  } else {
-    opponentScore += data.moves[opponentSid];
-    if (innings === 2 && opponentScore >= target) return endGame(false);
-  }
-
-  playButtons.classList.remove("hidden");
-  updateStatus();
-});
-
 
     function endGame(won) {
       gameEnded = true;
