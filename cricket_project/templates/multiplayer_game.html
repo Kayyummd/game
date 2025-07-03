@@ -2,33 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🏏 Multiplayer Hand Cricket</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎮 Hand Cricket Lobby & Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      height: 100%;
+    body {
+      background: radial-gradient(circle, #000022 0%, #000010 100%);
+      color: #00fff7;
       font-family: 'Press Start 2P', cursive;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      color: #ffcc00;
+      margin: 0;
+      padding: 0;
+    }
+    .lobby, .game-container {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-    }
-    .container {
-      display: flex;
-      gap: 20px;
-    }
-    .game-box {
-      background: rgba(0, 0, 0, 0.85);
-      border: 4px double #ffcc00;
-      box-shadow: 0 0 25px #00ffcc;
-      width: 700px;
       padding: 20px;
+    }
+    .box {
+      background: rgba(0,0,0,0.8);
+      padding: 30px;
+      border: 3px solid #00fff7;
+      box-shadow: 0 0 30px #00fff7;
       text-align: center;
+      max-width: 450px;
+      width: 90%;
+      margin-top: 30px;
+    }
+    button {
+      background: black;
+      color: #00fff7;
+      border: 2px solid #00fff7;
+      margin: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+    }
+    button:hover {
+      background: #00fff7;
+      color: black;
+    }
+    p { font-size: 14px; }
+    .game-container {
+      display: none;
+      color: #ffcc00;
     }
     .chat-box {
       background: #000;
@@ -37,28 +57,7 @@
       padding: 10px;
       display: flex;
       flex-direction: column;
-    }
-    button {
-      margin: 6px; padding: 10px 16px;
-      border: 2px solid #ffcc00;
-      background: black; color: #ffcc00;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 12px;
-    }
-    button:hover {
-      background: #ffcc00; color: black;
-    }
-    .hidden { display: none; }
-    #history {
-      font-size: 10px;
-      border: 2px dashed #00ffcc;
-      padding: 8px;
-      background-color: #111;
-      color: #00ffcc;
-      max-height: 150px;
-      overflow-y: auto;
-      text-align: left;
+      margin-top: 20px;
     }
     #messages {
       font-size: 10px;
@@ -77,55 +76,59 @@
       font-size: 10px;
       margin-top: 5px;
     }
-    #game-over {
-      display: none;
-      padding: 20px;
-      background: #000;
-      border: 2px dashed red;
-      margin-top: 20px;
+    #play-buttons button {
+      margin: 5px;
+    }
+    #history {
+      font-size: 10px;
+      border: 2px dashed #00ffcc;
+      padding: 8px;
+      background-color: #111;
+      color: #00ffcc;
+      max-height: 150px;
+      overflow-y: auto;
+      text-align: left;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="game-box">
-      <p id="status">🕹️ Waiting for opponent...</p>
-
-      <div id="toss-box" class="hidden">
-        <p>🪙 Choose Head or Tail:</p>
-        <button onclick="sendToss('Head')">🪙 Head</button>
-        <button onclick="sendToss('Tail')">🐍 Tail</button>
+  <div class="lobby">
+    <div class="box">
+      <h1>🎮 Lobby</h1>
+      <p>Room: <span id="room-code">--</span></p>
+      <p id="status">Waiting for player...</p>
+      <div id="toss-btns" style="display:none;">
+        <p>Select Head or Tail</p>
+        <button onclick="chooseToss('Head')">Head</button>
+        <button onclick="chooseToss('Tail')">Tail</button>
       </div>
-
-      <div id="batbowl-box" class="hidden">
-        <p>🏏 You won the toss! Choose:</p>
-        <button onclick="chooseBatBowl('Bat')">🗡️ Bat</button>
-        <button onclick="chooseBatBowl('Bowl')">🛡️ Bowl</button>
+      <div id="toss-result" style="display:none;">
+        <p id="toss-text"></p>
       </div>
-
-      <div id="play-buttons" class="hidden">
-        <p>🎯 Choose your number:</p>
-        <div>
-          <button onclick="playNum(0)">0</button>
-          <button onclick="playNum(1)">1</button>
-          <button onclick="playNum(2)">2</button>
-          <button onclick="playNum(3)">3</button>
-          <button onclick="playNum(4)">4</button>
-          <button onclick="playNum(5)">5</button>
-        </div>
-      </div>
-
-      <div id="scoreboard">
-        <h3>📜 Scoreboard History</h3>
-        <ul id="history" style="list-style: none; padding-left: 0;"></ul>
-      </div>
-
-      <div id="game-over">
-        <h3 id="result-msg">Game Over!</h3>
-        <button onclick="restartGame()">🔄 Restart</button>
+      <div id="batbowl-btns" style="display:none;">
+        <p>Choose Bat or Bowl</p>
+        <button onclick="chooseBatBowl('Bat')">Bat</button>
+        <button onclick="chooseBatBowl('Bowl')">Bowl</button>
       </div>
     </div>
-
+  </div>
+  <div class="game-container" id="game">
+    <h2 id="game-status">🕹️ Get Ready...</h2>
+    <div id="play-buttons" class="hidden">
+      <p>🎯 Choose your number:</p>
+      <div>
+        <button onclick="playNum(0)">0</button>
+        <button onclick="playNum(1)">1</button>
+        <button onclick="playNum(2)">2</button>
+        <button onclick="playNum(3)">3</button>
+        <button onclick="playNum(4)">4</button>
+        <button onclick="playNum(5)">5</button>
+      </div>
+    </div>
+    <div>
+      <h3>📜 Scoreboard</h3>
+      <ul id="history" style="list-style:none; padding-left:0;"></ul>
+    </div>
     <div class="chat-box">
       <h3>💬 Chat</h3>
       <div id="messages"></div>
@@ -133,78 +136,119 @@
       <button onclick="sendMsg()">Send</button>
     </div>
   </div>
-
   <script>
     const socket = io();
-    const urlParams = new URLSearchParams(window.location.search);
-    const room = urlParams.get('room');
-    const username = urlParams.get('username') || 'Player';
-    const isHost = urlParams.get('host') === 'true';
-    let mySocketId = "";
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    const username = params.get('username') || 'Player';
+    const isHost = params.get('host') === 'true';
+    let sid = "";
+    let innings = 1;
+    let myScore = 0, opponentScore = 0;
+    let isMyTurnToBat = false;
+    let target = null;
 
-    socket.on("connect", () => {
-      mySocketId = socket.id;
-      socket.emit("join_room", { room, host: isHost, username });
+    document.getElementById("room-code").innerText = room;
+
+    socket.on('connect', () => {
+      sid = socket.id;
+      socket.emit('join_room', { room, host: isHost, username });
     });
 
-    socket.on("both_ready", () => {
-      document.getElementById("status").innerText = "🎮 Both players connected!";
-      if (isHost) {
-        document.getElementById("toss-box").classList.remove("hidden");
-        document.getElementById("status").innerText = "🪙 Choose Head or Tail:";
-      }
+    socket.on('both_ready', () => {
+      document.getElementById('status').innerText = '✅ Both players joined!';
+      if (isHost) document.getElementById('toss-btns').style.display = 'block';
     });
 
-    function sendToss(choice) {
-      socket.emit("toss_choice", { room, choice });
-      document.getElementById("toss-box").classList.add("hidden");
-      document.getElementById("status").innerText = "⌛ Waiting for toss result...";
+    function chooseToss(choice) {
+      socket.emit('toss_choice', { room, choice });
+      document.getElementById('toss-btns').style.display = 'none';
+      document.getElementById('status').innerText = '🪙 Waiting for toss result...';
     }
 
-    socket.on("toss_result", (data) => {
-      const won = (data.winner === "host" && isHost) || (data.winner === "guest" && !isHost);
-      document.getElementById("status").innerText = `🪙 Toss Result: ${data.result} — ${data.winner.toUpperCase()} won`;
-      if (won) {
-        document.getElementById("batbowl-box").classList.remove("hidden");
-        document.getElementById("status").innerText = "🎖️ You won the toss! Choose Bat or Bowl";
+    socket.on('toss_result', data => {
+      document.getElementById('toss-result').style.display = 'block';
+      document.getElementById('toss-text').innerText = `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
+      if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
+        document.getElementById('batbowl-btns').style.display = 'block';
       } else {
-        document.getElementById("status").innerText = "🤔 Opponent choosing Bat/Bowl...";
+        document.getElementById('status').innerText = '🤔 Opponent choosing Bat/Bowl...';
       }
     });
 
     function chooseBatBowl(choice) {
-      socket.emit("bat_bowl_choice", { room, choice });
-      document.getElementById("batbowl-box").classList.add("hidden");
-      document.getElementById("status").innerText = "🛠️ Setting up the game...";
+      socket.emit('bat_bowl_choice', { room, choice });
+      document.getElementById('batbowl-btns').style.display = 'none';
+      document.getElementById('status').innerText = '🛠️ Starting game...';
     }
 
     socket.on("game_start", (data) => {
-      const batting = data.bat_first_sid === mySocketId;
+      document.querySelector(".lobby").style.display = "none";
+      document.getElementById("game").style.display = "flex";
+      isMyTurnToBat = data.bat_first_sid === sid;
+      innings = 1;
+      myScore = 0;
+      opponentScore = 0;
+      target = null;
+      document.getElementById("history").innerHTML = "";
+      updateGameStatus();
       document.getElementById("play-buttons").classList.remove("hidden");
-      document.getElementById("status").innerText = batting ? "🏏 You are Batting!" : "🥎 You are Bowling!";
     });
+
+    function updateGameStatus() {
+      if (innings === 1) {
+        document.getElementById("game-status").innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+      } else {
+        document.getElementById("game-status").innerText = isMyTurnToBat ? `🏏 Batting – Target: ${target}` : `🥎 Bowling – Defend ${target}`;
+      }
+    }
 
     function playNum(n) {
       socket.emit("player_move", { room, move: n });
       document.getElementById("play-buttons").classList.add("hidden");
-      document.getElementById("status").innerText = "⏳ Waiting for opponent...";
+      document.getElementById("game-status").innerText = "⏳ Waiting for opponent...";
     }
 
     socket.on("round_result", data => {
       const list = document.getElementById("history");
       const li = document.createElement("li");
+      const myMove = data.moves[sid];
+      const opponentId = Object.keys(data.moves).find(id => id !== sid);
+      const opponentMove = data.moves[opponentId];
       if (data.type === "out") {
         li.textContent = `💥 OUT! Both played ${data.num}`;
+        if (innings === 1) {
+          target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
+          innings = 2;
+          isMyTurnToBat = !isMyTurnToBat;
+          document.getElementById("history").appendChild(document.createElement("hr"));
+          updateGameStatus();
+        } else {
+          const win = isMyTurnToBat ? myScore >= target : opponentScore >= target;
+          document.getElementById("game-status").innerText = win ? "🎉 You Won! 🏆" : "😢 You Lost!";
+          if (win) confetti();
+          return;
+        }
       } else {
-        const myMove = data.moves[mySocketId];
-        const opponentId = Object.keys(data.moves).find(id => id !== mySocketId);
-        const opponentMove = data.moves[opponentId];
-        const myName = data.usernames[mySocketId] || "You";
-        const oppName = data.usernames[opponentId] || "Opponent";
-        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove}`;
+        li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
+        if (isMyTurnToBat) {
+          myScore += myMove;
+          if (innings === 2 && myScore >= target) {
+            document.getElementById("game-status").innerText = "🎉 You Won! 🏆";
+            confetti();
+            return;
+          }
+        } else {
+          opponentScore += opponentMove;
+          if (innings === 2 && opponentScore >= target) {
+            document.getElementById("game-status").innerText = "😢 You Lost!";
+            return;
+          }
+        }
       }
       list.appendChild(li);
       document.getElementById("play-buttons").classList.remove("hidden");
+      updateGameStatus();
     });
 
     function sendMsg() {
@@ -222,19 +266,6 @@
       box.appendChild(line);
       box.scrollTop = box.scrollHeight;
     });
-
-    socket.on("game_over", ({ winner_name, loser_name }) => {
-      const msg = (winner_name === username)
-        ? "🎉 You Won! Champion 🏆"
-        : `😢 You Lost! Winner: ${winner_name}`;
-      document.getElementById("result-msg").innerText = msg;
-      document.getElementById("game-over").style.display = "block";
-      confetti();
-    });
-
-    function restartGame() {
-      socket.emit("restart_game", { room });
-    }
   </script>
 </body>
 </html>
