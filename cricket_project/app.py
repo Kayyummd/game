@@ -169,7 +169,6 @@ def handle_player_move(data):
 
         batter_sid = r["bat_first_sid"] if r["innings"] == 1 else next(p for p in r["players"] if p != r["bat_first_sid"])
 
-        # OUT condition
         if m1 == m2:
             if r["innings"] == 1:
                 r["target"] = r["scores"].get(batter_sid, 0) + 1
@@ -187,6 +186,7 @@ def handle_player_move(data):
                     "moves": {p1: m1, p2: m2},
                     "usernames": r["names"]
                 }, room=room)
+
                 scores = r["scores"]
                 p1_score = scores.get(p1, 0)
                 p2_score = scores.get(p2, 0)
@@ -195,14 +195,14 @@ def handle_player_move(data):
                 elif p2_score > p1_score:
                     winner = p2
                 else:
-                    winner = None  # Tie
+                    winner = None
 
                 emit("game_over", {
                     "winner_sid": winner,
-                    "winner_name": r["names"].get(winner, "Tie") if winner else "Tie"
+                    "winner_name": r["names"].get(winner, "Tie") if winner else "Tie",
+                    "usernames": r["names"]
                 }, room=room)
                 r["target"] = None
-
         else:
             if batter_sid == p1:
                 r["scores"][p1] = r["scores"].get(p1, 0) + m1
@@ -220,7 +220,8 @@ def handle_player_move(data):
                     }, room=room)
                     emit("game_over", {
                         "winner_sid": batter_sid,
-                        "winner_name": r["names"].get(batter_sid, "Player")
+                        "winner_name": r["names"].get(batter_sid, "Player"),
+                        "usernames": r["names"]
                     }, room=room)
                     r["target"] = None
                     r["moves"] = {}
@@ -261,7 +262,7 @@ def handle_restart(data):
     r["target"] = None
     emit("game_start", {"bat_first_sid": r["bat_first_sid"], "usernames": r["names"]}, room=room)
 
-# --- Run ---
+# --- Run Server ---
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
