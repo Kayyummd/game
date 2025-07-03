@@ -114,6 +114,11 @@
       sid = socket.id;
       socket.emit('join_room', { room, host: isHost, username });
     });
+    socket.on("game_over", data => {
+      const youWon = data.winner_sid === sid;
+      endGame(youWon);
+    });
+
 
     socket.on("game_start", data => {
       document.getElementById("game").style.display = "flex";
@@ -150,53 +155,41 @@
     }
 
     socket.on("round_result", data => {
-      if (gameEnded) return;
-
-      const li = document.createElement("li");
       const myMove = data.moves[sid];
-      const opponentId = Object.keys(data.moves).find(id => id !== sid);
-      const opponentMove = data.moves[opponentId];
-      const myName = data.usernames[sid];
-      const oppName = data.usernames[opponentId];
-
+      const opponentSid = Object.keys(data.moves).find(id => id !== sid);
+  
       if (data.type === "out") {
-        const outMsg = isMyTurnToBat ? "💥 You're OUT!" : "💥 Opponent is OUT!";
-        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove} – ${outMsg}`;
-        historyList.appendChild(li);
+        showHistory(`💥 OUT! Both played ${data.num}`);
+    
+      if (innings === 1) {
+        // Compute target and switch roles
+      target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
+      innings = 2;
+      isMyTurnToBat = !isMyTurnToBat;
+      showHistory(`🎯 Target: ${target}`);
+      updateStatus();
+    } else {
+      // Out in 2nd innings → game over
+      const youWin = !isMyTurnToBat;
+      endGame(youWin);
+    }
+    return;
+  }
+  
+  // Normal scoring
+  showHistory(`${username}: ${myMove} | Opponent: ${data.moves[opponentSid]}`);
+  if (isMyTurnToBat) {
+    myScore += myMove;
+    if (innings === 2 && myScore >= target) return endGame(true);
+  } else {
+    opponentScore += data.moves[opponentSid];
+    if (innings === 2 && opponentScore >= target) return endGame(false);
+  }
 
-        if (innings === 1) {
-          target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
-          innings = 2;
-          isMyTurnToBat = !isMyTurnToBat;
-          historyList.appendChild(document.createElement("hr"));
-          updateGameStatus();
-        } else {
-          const won = !isMyTurnToBat;
-          endGame(won);
-          return;
-        }
-      } else {
-        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove}`;
-        historyList.appendChild(li);
+  playButtons.classList.remove("hidden");
+  updateStatus();
+});
 
-        if (isMyTurnToBat) {
-          myScore += myMove;
-          if (innings === 2 && myScore >= target) {
-            endGame(true);
-            return;
-          }
-        } else {
-          opponentScore += opponentMove;
-          if (innings === 2 && opponentScore >= target) {
-            endGame(false);
-            return;
-          }
-        }
-      }
-
-      playButtons.classList.remove("hidden");
-      updateGameStatus();
-    });
 
     function endGame(won) {
       gameEnded = true;
