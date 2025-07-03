@@ -8,123 +8,135 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    body {
-      font-family: 'Press Start 2P', cursive;
-      background: #111;
-      color: #ffcc00;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+  body {
+    font-family: 'Press Start 2P', cursive;
+    background: #111;
+    background-image:
+      radial-gradient(#ffcc00 1px, transparent 1px),
+      radial-gradient(#ffcc00 1px, transparent 1px);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+    color: #ffcc00;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: pulse 8s infinite ease-in-out;
+  }
 
-    .top-bar {
-      width: 100%;
-      padding: 10px;
-      background-color: #222;
-      color: #ffcc00;
-      text-align: center;
-      font-size: 12px;
-      border-bottom: 2px solid #ffcc00;
-    }
+  @keyframes pulse {
+    0%, 100% { background-color: #111; }
+    50% { background-color: #1c1c1c; }
+  }
 
-    .game-wrapper {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 1000px;
-    }
+  .top-bar {
+    width: 100%;
+    padding: 10px;
+    background-color: #222;
+    color: #ffcc00;
+    text-align: center;
+    font-size: 12px;
+    border-bottom: 2px solid #ffcc00;
+  }
 
-    .game-container {
-      flex: 3;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      margin: 20px;
-      padding: 10px;
-      background-color: #000;
-      box-shadow: 0 0 20px #ffcc00;
-      border: 4px double #ffcc00;
-    }
+  .game-wrapper {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1000px;
+  }
 
-    .chat-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin: 20px 10px 20px 0;
-      padding: 10px;
-      background-color: #000;
-      border: 4px double #ffcc00;
-      max-height: 500px;
-    }
+  .game-container {
+    flex: 3;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px;
+    padding: 10px;
+    background-color: #000;
+    box-shadow: 0 0 25px #ffcc00, 0 0 50px #ffcc00;
+    border: 4px double #ffcc00;
+  }
 
-    #chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      font-size: 10px;
-      margin-bottom: 10px;
-    }
+  .chat-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 20px 10px 20px 0;
+    padding: 10px;
+    background-color: #000;
+    border: 4px double #ffcc00;
+    max-height: 500px;
+  }
 
-    #chat-input {
-      display: flex;
-    }
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 10px;
+    margin-bottom: 10px;
+  }
 
-    #chat-input input {
-      flex: 1;
-      padding: 5px;
-      font-family: 'Press Start 2P', cursive;
-      font-size: 10px;
-      background-color: #222;
-      color: #ffcc00;
-      border: 1px solid #ffcc00;
-    }
+  #chat-input {
+    display: flex;
+  }
 
-    #chat-input button {
-      background-color: #222;
-      color: #ffcc00;
-      border: 1px solid #ffcc00;
-      font-size: 10px;
-      cursor: pointer;
-      padding: 5px;
-    }
+  #chat-input input {
+    flex: 1;
+    padding: 5px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    background-color: #222;
+    color: #ffcc00;
+    border: 1px solid #ffcc00;
+  }
 
-    button {
-      background-color: #222;
-      color: #ffcc00;
-      border: 2px solid #ffcc00;
-      padding: 10px 15px;
-      font-size: 12px;
-      margin: 5px;
-      cursor: pointer;
-    }
+  #chat-input button {
+    background-color: #222;
+    color: #ffcc00;
+    border: 1px solid #ffcc00;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 5px;
+  }
 
-    button:hover {
-      background-color: #ffcc00;
-      color: #000;
-    }
+  button {
+    background-color: #222;
+    color: #ffcc00;
+    border: 2px solid #ffcc00;
+    padding: 10px 15px;
+    font-size: 12px;
+    margin: 5px;
+    cursor: pointer;
+  }
 
-    #history {
-      max-height: 200px;
-      overflow-y: auto;
-      margin: 10px 0;
-      font-size: 10px;
-      width: 100%;
-    }
+  button:hover {
+    background-color: #ffcc00;
+    color: #000;
+  }
 
-    .hidden {
-      display: none;
-    }
+  #history {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 10px 0;
+    font-size: 10px;
+    width: 100%;
+  }
 
-    .confetti {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 999;
-    }
-  </style>
+  .hidden {
+    display: none;
+  }
+
+  .confetti {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+
 </head>
 <body>
 
