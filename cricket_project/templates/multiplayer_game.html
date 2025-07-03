@@ -2,118 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>🎮 Hand Cricket Multiplayer Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎮 Hand Cricket Lobby & Game</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
-      background: radial-gradient(circle, #000022 0%, #000010 100%);
-      color: #00fff7;
       font-family: 'Press Start 2P', cursive;
+      background: #111;
+      color: #ffcc00;
       margin: 0;
       padding: 0;
-    }
-    .lobby, .game-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
     }
-    .box {
-      background: rgba(0,0,0,0.8);
-      padding: 30px;
-      border: 3px solid #00fff7;
-      box-shadow: 0 0 30px #00fff7;
-      text-align: center;
-      max-width: 450px;
-      width: 90%;
-      margin-top: 30px;
-    }
-    button {
-      background: black;
-      color: #00fff7;
-      border: 2px solid #00fff7;
-      margin: 8px;
-      padding: 10px 18px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 12px;
-    }
-    button:hover {
-      background: #00fff7;
-      color: black;
-    }
-    p { font-size: 14px; }
     .game-container {
       display: none;
-      color: #ffcc00;
-    }
-    .chat-box {
-      background: #000;
-      border: 4px double #00ffcc;
-      width: 300px;
-      padding: 10px;
-      display: flex;
       flex-direction: column;
+      align-items: center;
       margin-top: 20px;
+      width: 90%;
+      max-width: 800px;
+      border: 4px double #ffcc00;
+      padding: 10px;
+      background-color: #000;
+      box-shadow: 0 0 20px #ffcc00;
     }
-    #messages {
-      font-size: 10px;
-      border: 2px dashed #00ffcc;
-      padding: 8px;
-      background-color: #111;
-      color: #00ffcc;
-      height: 100px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    #msg-input {
-      width: 100%;
-      padding: 5px;
-      font-family: inherit;
-      font-size: 10px;
-      margin-top: 5px;
-    }
-    #play-buttons button {
+    button {
+      background-color: #222;
+      color: #ffcc00;
+      border: 2px solid #ffcc00;
+      padding: 10px 15px;
+      font-size: 12px;
       margin: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #ffcc00;
+      color: #000;
+    }
+    .hidden {
+      display: none;
     }
     #history {
-      font-size: 10px;
-      border: 2px dashed #00ffcc;
-      padding: 8px;
-      background-color: #111;
-      color: #00ffcc;
-      max-height: 150px;
+      max-height: 200px;
       overflow-y: auto;
-      text-align: left;
+      margin: 10px 0;
+      font-size: 10px;
+      width: 100%;
+    }
+    .confetti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
-  <div class="lobby">
-    <div class="box">
-      <h1>🎮 Lobby</h1>
-      <p>Room: <span id="room-code">--</span></p>
-      <p id="status">Waiting for player...</p>
-      <div id="toss-btns" style="display:none;">
-        <p>Select Head or Tail</p>
-        <button onclick="chooseToss('Head')">Head</button>
-        <button onclick="chooseToss('Tail')">Tail</button>
-      </div>
-      <div id="toss-result" style="display:none;">
-        <p id="toss-text"></p>
-      </div>
-      <div id="batbowl-btns" style="display:none;">
-        <p>Choose Bat or Bowl</p>
-        <button onclick="chooseBatBowl('Bat')">Bat</button>
-        <button onclick="chooseBatBowl('Bowl')">Bowl</button>
-      </div>
-    </div>
-  </div>
   <div class="game-container" id="game">
+    <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
     <h2 id="game-status">🕹️ Get Ready...</h2>
+
     <div id="play-buttons" class="hidden">
       <p>🎯 Choose your number:</p>
       <div>
@@ -125,147 +79,140 @@
         <button onclick="playNum(5)">5</button>
       </div>
     </div>
+
     <div>
       <h3>📜 Scoreboard</h3>
       <ul id="history" style="list-style:none; padding-left:0;"></ul>
     </div>
-    <div class="chat-box">
-      <h3>💬 Chat</h3>
-      <div id="messages"></div>
-      <input type="text" id="msg-input" placeholder="Type taunt or emoji... 😎" />
-      <button onclick="sendMsg()">Send</button>
-    </div>
+
+    <button id="reset-btn" class="hidden">⟲ Reset</button>
+    <div class="confetti" id="confetti"></div>
   </div>
+
   <script>
     const socket = io();
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
     const username = params.get('username') || 'Player';
     const isHost = params.get('host') === 'true';
+
     let sid = "";
     let innings = 1;
     let myScore = 0, opponentScore = 0;
     let isMyTurnToBat = false;
     let target = null;
+    let gameEnded = false;
 
-    document.getElementById("room-code").innerText = room;
+    const targetDisplay = document.getElementById("target-display");
+    const gameStatus = document.getElementById("game-status");
+    const playButtons = document.getElementById("play-buttons");
+    const historyList = document.getElementById("history");
+    const resetBtn = document.getElementById("reset-btn");
+    const confettiEl = document.getElementById("confetti");
 
     socket.on('connect', () => {
       sid = socket.id;
       socket.emit('join_room', { room, host: isHost, username });
     });
 
-    socket.on('both_ready', () => {
-      document.getElementById('status').innerText = '✅ Both players joined!';
-      if (isHost) document.getElementById('toss-btns').style.display = 'block';
-    });
-
-    function chooseToss(choice) {
-      socket.emit('toss_choice', { room, choice });
-      document.getElementById('toss-btns').style.display = 'none';
-      document.getElementById('status').innerText = '🪙 Waiting for toss result...';
-    }
-
-    socket.on('toss_result', data => {
-      document.getElementById('toss-result').style.display = 'block';
-      document.getElementById('toss-text').innerText = `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
-      if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
-        document.getElementById('batbowl-btns').style.display = 'block';
-      } else {
-        document.getElementById('status').innerText = '🤔 Opponent choosing Bat/Bowl...';
-      }
-    });
-
-    function chooseBatBowl(choice) {
-      socket.emit('bat_bowl_choice', { room, choice });
-      document.getElementById('batbowl-btns').style.display = 'none';
-      document.getElementById('status').innerText = '🛠️ Starting game...';
-    }
-
-    socket.on("game_start", (data) => {
-      document.querySelector(".lobby").style.display = "none";
+    socket.on("game_start", data => {
       document.getElementById("game").style.display = "flex";
       isMyTurnToBat = data.bat_first_sid === sid;
       innings = 1;
       myScore = 0;
       opponentScore = 0;
       target = null;
-      document.getElementById("history").innerHTML = "";
+      gameEnded = false;
+      historyList.innerHTML = "";
+      resetBtn.classList.add("hidden");
       updateGameStatus();
-      document.getElementById("play-buttons").classList.remove("hidden");
+      playButtons.classList.remove("hidden");
     });
 
-    function updateGameStatus() {
+    function updateGameStatus(){
       if (innings === 1) {
-        document.getElementById("game-status").innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+        gameStatus.innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+        targetDisplay.style.display = "none";
       } else {
-        document.getElementById("game-status").innerText = isMyTurnToBat ? `🏏 Batting – Target: ${target}` : `🥎 Bowling – Defend ${target}`;
+        targetDisplay.style.display = "block";
+        targetDisplay.innerText = `🎯 Target: ${target}`;
+        gameStatus.innerText = isMyTurnToBat
+          ? `🏏 Batting – Target: ${target}`
+          : `🥎 Bowling – Defend ${target}`;
       }
     }
 
     function playNum(n) {
+      if (gameEnded) return;
       socket.emit("player_move", { room, move: n });
-      document.getElementById("play-buttons").classList.add("hidden");
-      document.getElementById("game-status").innerText = "⏳ Waiting for opponent...";
+      playButtons.classList.add("hidden");
+      gameStatus.innerText = "⏳ Waiting for opponent...";
     }
 
     socket.on("round_result", data => {
-      const list = document.getElementById("history");
+      if (gameEnded) return;
+
       const li = document.createElement("li");
       const myMove = data.moves[sid];
       const opponentId = Object.keys(data.moves).find(id => id !== sid);
       const opponentMove = data.moves[opponentId];
+      const myName = data.usernames[sid];
+      const oppName = data.usernames[opponentId];
+
       if (data.type === "out") {
-        li.textContent = `💥 OUT! Both played ${data.num}`;
+        const outMsg = isMyTurnToBat ? "💥 You're OUT!" : "💥 Opponent is OUT!";
+        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove} – ${outMsg}`;
+        historyList.appendChild(li);
+
         if (innings === 1) {
           target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
           innings = 2;
           isMyTurnToBat = !isMyTurnToBat;
-          document.getElementById("history").appendChild(document.createElement("hr"));
+          historyList.appendChild(document.createElement("hr"));
           updateGameStatus();
         } else {
-          const win = isMyTurnToBat ? myScore >= target : opponentScore >= target;
-          document.getElementById("game-status").innerText = win ? "🎉 You Won! 🏆" : "😢 You Lost!";
-          if (win) confetti();
+          const won = !isMyTurnToBat;
+          endGame(won);
           return;
         }
       } else {
-        li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
+        li.textContent = `${myName}: ${myMove} | ${oppName}: ${opponentMove}`;
+        historyList.appendChild(li);
+
         if (isMyTurnToBat) {
           myScore += myMove;
           if (innings === 2 && myScore >= target) {
-            document.getElementById("game-status").innerText = "🎉 You Won! 🏆";
-            confetti();
+            endGame(true);
             return;
           }
         } else {
           opponentScore += opponentMove;
           if (innings === 2 && opponentScore >= target) {
-            document.getElementById("game-status").innerText = "😢 You Lost!";
+            endGame(false);
             return;
           }
         }
       }
-      list.appendChild(li);
-      document.getElementById("play-buttons").classList.remove("hidden");
+
+      playButtons.classList.remove("hidden");
       updateGameStatus();
     });
 
-    function sendMsg() {
-      const input = document.getElementById("msg-input");
-      const msg = input.value.trim();
-      if (!msg) return;
-      socket.emit("send_message", { room, message: msg, username });
-      input.value = "";
+    function endGame(won) {
+      gameEnded = true;
+      gameStatus.innerText = won ? "🎉 You Won! 🏆" : "😢 You Lost!";
+      playButtons.classList.add("hidden");
+      resetBtn.classList.remove("hidden");
+      if (won) showConfetti();
     }
 
-    socket.on("receive_message", ({ username, message }) => {
-      const box = document.getElementById("messages");
-      const line = document.createElement("div");
-      line.textContent = `${username}: ${message}`;
-      box.appendChild(line);
-      box.scrollTop = box.scrollHeight;
-    });
+    resetBtn.onclick = () => {
+      socket.emit("restart_game", { room });
+    };
+
+    function showConfetti() {
+      window.confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+    }
   </script>
 </body>
 </html>
