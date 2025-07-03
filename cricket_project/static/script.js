@@ -22,7 +22,8 @@ function login() {
     if (data.success) {
       showMessage("Login successful! 🎉", true);
       setTimeout(() => {
-        window.location.href = "/game";  // Redirect to game screen
+        // ✅ Redirect to room with username in query string
+        window.location.href = `/room?username=${encodeURIComponent(username)}&host=true`;
       }, 1000);
     } else {
       showMessage(data.message || "Login failed.");
