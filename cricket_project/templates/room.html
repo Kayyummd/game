@@ -151,99 +151,124 @@
 
   <!-- Script -->
   <script>
-    const socket = io();
-    const params = new URLSearchParams(window.location.search);
-    const room = params.get('room');
-    const username = params.get('username') || 'Player';
-    const isHost = params.get('host') === 'true';
-    let sid = "";
+  const socket = io();
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get('room');
+  const username = params.get('username') || 'Player';
+  const isHost = params.get('host') === 'true';
+  let sid = "";
+  let opponentScore = 0;
+  let targetScore = null;
 
-    document.getElementById("room-code").innerText = room;
+  document.getElementById("room-code").innerText = room;
 
-    socket.on('connect', () => {
-      sid = socket.id;
-      socket.emit('join_room', { room, host: isHost, username });
-    });
+  socket.on('connect', () => {
+    sid = socket.id;
+    socket.emit('join_room', { room, host: isHost, username });
+  });
 
-    socket.on('both_ready', () => {
-      document.getElementById('status').innerText = '✅ Both players joined!';
-      if (isHost) document.getElementById('toss-btns').style.display = 'block';
-    });
+  socket.on('both_ready', () => {
+    document.getElementById('status').innerText = '✅ Both players joined!';
+    if (isHost) document.getElementById('toss-btns').style.display = 'block';
+  });
 
-    function chooseToss(choice) {
-      socket.emit('toss_choice', { room, choice });
-      document.getElementById('toss-btns').style.display = 'none';
-      document.getElementById('status').innerText = '🪙 Waiting for toss result...';
+  function chooseToss(choice) {
+    socket.emit('toss_choice', { room, choice });
+    document.getElementById('toss-btns').style.display = 'none';
+    document.getElementById('status').innerText = '🪙 Waiting for toss result...';
+  }
+
+  socket.on('toss_result', data => {
+    document.getElementById('toss-result').style.display = 'block';
+    document.getElementById('toss-text').innerText =
+      `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
+
+    if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
+      document.getElementById('batbowl-btns').style.display = 'block';
+    } else {
+      document.getElementById('status').innerText = '🤔 Opponent choosing Bat/Bowl...';
     }
+  });
 
-    socket.on('toss_result', data => {
-      document.getElementById('toss-result').style.display = 'block';
-      document.getElementById('toss-text').innerText =
-        `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
+  function chooseBatBowl(choice) {
+    socket.emit('bat_bowl_choice', { room, choice });
+    document.getElementById('batbowl-btns').style.display = 'none';
+    document.getElementById('status').innerText = '🛠️ Starting game...';
+  }
 
-      if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
-        document.getElementById('batbowl-btns').style.display = 'block';
-      } else {
-        document.getElementById('status').innerText = '🤔 Opponent choosing Bat/Bowl...';
+  socket.on("game_start", (data) => {
+    document.querySelector(".lobby").style.display = "none";
+    document.getElementById("game").style.display = "flex";
+    const batting = data.bat_first_sid === sid;
+    document.getElementById("game-status").innerText = batting ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+    document.getElementById("play-buttons").classList.remove("hidden");
+  });
+
+  function playNum(n) {
+    socket.emit("player_move", { room, move: n });
+    document.getElementById("play-buttons").classList.add("hidden");
+    document.getElementById("game-status").innerText = "⏳ Waiting for opponent...";
+  }
+
+  socket.on("round_result", data => {
+    const list = document.getElementById("history");
+    const li = document.createElement("li");
+
+    if (data.type === "out") {
+      li.textContent = `💥 OUT! Both played ${data.num}`;
+
+      // Save opponent score to calculate target
+      const scores = Object.values(data.usernames).map(u => u === username ? sid : null);
+      const p1 = Object.keys(data.usernames)[0];
+      const p2 = Object.keys(data.usernames)[1];
+
+      if (targetScore === null && data.usernames[p1] && data.usernames[p2]) {
+        const myId = sid;
+        const opponentId = p1 === myId ? p2 : p1;
+        opponentScore = parseInt(document.getElementById("history").getAttribute("data-score")) || 0;
+        targetScore = opponentScore + 1;
+        const info = document.createElement("li");
+        info.textContent = `🎯 Target: ${targetScore} runs`;
+        list.appendChild(info);
       }
-    });
 
-    function chooseBatBowl(choice) {
-      socket.emit('bat_bowl_choice', { room, choice });
-      document.getElementById('batbowl-btns').style.display = 'none';
-      document.getElementById('status').innerText = '🛠️ Starting game...';
+    } else {
+      const myMove = data.moves[sid];
+      const opponentId = Object.keys(data.moves).find(id => id !== sid);
+      const opponentMove = data.moves[opponentId];
+      li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
     }
 
-    socket.on("game_start", (data) => {
-      document.querySelector(".lobby").style.display = "none";
-      document.getElementById("game").style.display = "flex";
-      const batting = data.bat_first_sid === sid;
-      document.getElementById("game-status").innerText = batting ? "🏏 You are Batting!" : "🥎 You are Bowling!";
-      document.getElementById("play-buttons").classList.remove("hidden");
-    });
+    list.appendChild(li);
+    document.getElementById("play-buttons").classList.remove("hidden");
+  });
 
-    function playNum(n) {
-      socket.emit("player_move", { room, move: n });
-      document.getElementById("play-buttons").classList.add("hidden");
-      document.getElementById("game-status").innerText = "⏳ Waiting for opponent...";
-    }
+  function sendMsg() {
+    const input = document.getElementById("msg-input");
+    const msg = input.value.trim();
+    if (!msg) return;
+    socket.emit("send_message", { room, message: msg, username });
+    input.value = "";
+  }
 
-    socket.on("round_result", data => {
-      const list = document.getElementById("history");
-      const li = document.createElement("li");
-      if (data.type === "out") {
-        li.textContent = `💥 OUT! Both played ${data.num}`;
-      } else {
-        const myMove = data.moves[sid];
-        const opponentId = Object.keys(data.moves).find(id => id !== sid);
-        const opponentMove = data.moves[opponentId];
-        li.textContent = `${username}: ${myMove} | Opponent: ${opponentMove}`;
-      }
-      list.appendChild(li);
-      document.getElementById("play-buttons").classList.remove("hidden");
-    });
+  socket.on("receive_message", ({ username, message }) => {
+    const box = document.getElementById("messages");
+    const line = document.createElement("div");
+    line.textContent = `${username}: ${message}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  });
 
-    function sendMsg() {
-      const input = document.getElementById("msg-input");
-      const msg = input.value.trim();
-      if (!msg) return;
-      socket.emit("send_message", { room, message: msg, username });
-      input.value = "";
-    }
+  socket.on("game_over", ({ winner_name }) => {
+    const isWinner = winner_name === username;
+    const msg = isWinner
+      ? "🎉 You Won! 🏆"
+      : `😢 You Lost! Winner: ${winner_name}`;
+    document.getElementById("game-status").innerText = msg;
 
-    socket.on("receive_message", ({ username, message }) => {
-      const box = document.getElementById("messages");
-      const line = document.createElement("div");
-      line.textContent = `${username}: ${message}`;
-      box.appendChild(line);
-      box.scrollTop = box.scrollHeight;
-    });
+    if (isWinner) confetti();
+  });
+</script>
 
-    socket.on("game_over", ({ winner_name }) => {
-      document.getElementById("game-status").innerText = winner_name === username
-        ? "🎉 You Won! 🏆" : `😢 You Lost! Winner: ${winner_name}`;
-      confetti();
-    });
-  </script>
 </body>
 </html>
