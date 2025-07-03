@@ -173,12 +173,12 @@ def handle_player_move(data):
 
         if m1 == m2:
             r["outs"] += 1
+            emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
             if r["innings"] == 1:
                 r["target"] = r["scores"].get(batter_sid, 0) + 1
                 r["innings"] = 2
                 r["outs"] = 0
                 r["moves"] = {}
-                emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
                 return
             else:
                 p1_score = r["scores"].get(p1, 0)
@@ -188,8 +188,7 @@ def handle_player_move(data):
                 elif p2_score > p1_score:
                     winner, loser = p2, p1
                 else:
-                    winner = loser = None  # Tie
-                emit("round_result", {"type": "out", "num": m1, "usernames": r["names"]}, room=room)
+                    winner = loser = None
                 emit("game_over", {
                     "winner": winner,
                     "loser": loser,
@@ -201,7 +200,8 @@ def handle_player_move(data):
                 "type": "continue",
                 "moves": {p1: m1, p2: m2},
                 "usernames": r["names"],
-                "target": r["target"]
+                "target": r["target"],
+                "scores": r["scores"]
             }, room=room)
 
         r["moves"] = {}
