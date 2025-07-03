@@ -70,22 +70,22 @@
   </div>
 
   <script>
-    const socket = io(); // ✅ use relative path for deployment compatibility
+    const socket = io();
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
+    const username = params.get('username') || 'Player';
     const isHost = params.get('host') === 'true';
     let sid = null;
 
     document.getElementById('room-code').innerText = room;
 
-    // ✅ Only emit join_room AFTER socket connects
     socket.on('connect', () => {
       sid = socket.id;
-      socket.emit('join_room', { room, host: isHost });
+      socket.emit('join_room', { room, host: isHost, username });
     });
 
     socket.on('both_ready', () => {
-      document.getElementById('status').innerText = 'Both players joined!';
+      document.getElementById('status').innerText = '✅ Both players joined!';
       if (isHost) {
         document.getElementById('toss-btns').style.display = 'block';
       }
@@ -94,11 +94,10 @@
     function chooseToss(choice) {
       socket.emit('toss_choice', { room, choice });
       document.getElementById('toss-btns').style.display = 'none';
-      document.getElementById('status').innerText = 'Waiting for toss...';
+      document.getElementById('status').innerText = '🪙 Waiting for toss result...';
     }
 
     socket.on('toss_result', data => {
-      document.getElementById('status').innerText = '';
       document.getElementById('toss-result').style.display = 'block';
       document.getElementById('toss-text').innerText =
         `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
@@ -106,18 +105,18 @@
       if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
         document.getElementById('batbowl-btns').style.display = 'block';
       } else {
-        document.getElementById('status').innerText = 'Opponent is choosing Bat/Bowl...';
+        document.getElementById('status').innerText = '🤔 Opponent choosing Bat/Bowl...';
       }
     });
 
     function chooseBatBowl(choice) {
       socket.emit('bat_bowl_choice', { room, choice });
       document.getElementById('batbowl-btns').style.display = 'none';
-      document.getElementById('status').innerText = 'Starting game...';
+      document.getElementById('status').innerText = '🛠️ Starting game...';
     }
 
     socket.on('game_start', () => {
-      window.location.href = `multiplayer_game.html?room=${room}`;
+      window.location.href = `multiplayer_game.html?room=${room}&username=${encodeURIComponent(username)}&host=${isHost}`;
     });
   </script>
 </body>
