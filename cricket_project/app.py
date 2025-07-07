@@ -98,6 +98,18 @@ def set_mode():
     session.close()
     return jsonify({"success": False, "message": "User not found"}), 404
 
+# ✅ NEW ROUTE: Log user playing mode
+@app.route("/track_mode", methods=["POST"])
+def track_mode():
+    data = request.get_json()
+    username = data.get("username")
+    mode = data.get("mode")
+    if not username or not mode:
+        return jsonify({"success": False, "message": "Missing data"}), 400
+    with open("login_history.log", "a") as f:
+        f.write(f"{username} started playing in {mode} mode\n")
+    return jsonify({"success": True})
+
 # --- Admin Helper ---
 def is_admin(auth):
     if not auth or not auth.username:
