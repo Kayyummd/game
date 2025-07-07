@@ -60,51 +60,83 @@
     </div>
   </div>
 
-  <script>
-    // 🎮 Bot mode
-    function playBot() {
-      alert("🎮 Starting solo game vs Bot...");
-      localStorage.setItem("mode", "bot");  // store mode for tracking
-      window.location.href = "/game_bot";
-    }
-
-    // 🎮 Friend multiplayer
-    function showFriendOptions() {
-      document.getElementById("friend-options").style.display = "block";
-    }
-
-    function createRoom() {
-      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      alert("🔑 Room Created: " + roomCode);
-      localStorage.setItem("mode", "multiplayer"); // store mode
-      window.location.href = "/room?room=" + roomCode + "&host=true";
-    }
-
-    function joinRoom() {
-      document.getElementById("room-form").style.display = "block";
-    }
-
-    function confirmJoin() {
-      const roomCode = document.getElementById("roomCode").value.trim().toUpperCase();
-      if (!roomCode) {
-        document.getElementById("message").innerText = "Please enter a valid room code.";
-        return;
-      }
-      localStorage.setItem("mode", "multiplayer"); // store mode
-      window.location.href = "/room?room=" + roomCode;
-    }
-
-    // 👑 Check if user is admin
+<script>
+  // 🎮 Bot mode
+  function playBot() {
+    alert("🎮 Starting solo game vs Bot...");
     const username = localStorage.getItem("username");
-    const role = localStorage.getItem("role");
+    localStorage.setItem("mode", "bot");
 
     if (username) {
-      document.getElementById("username-label").innerText = username;
+      fetch("/track_mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, mode: "bot" })
+      });
     }
 
-    if (role === "admin") {
-      document.getElementById("admin-panel").style.display = "block";
+    window.location.href = "/game_bot";
+  }
+
+  // 🎮 Friend multiplayer
+  function showFriendOptions() {
+    document.getElementById("friend-options").style.display = "block";
+  }
+
+  function createRoom() {
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    alert("🔑 Room Created: " + roomCode);
+    const username = localStorage.getItem("username");
+    localStorage.setItem("mode", "multiplayer");
+
+    if (username) {
+      fetch("/track_mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, mode: "multiplayer" })
+      });
     }
-  </script>
+
+    window.location.href = "/room?room=" + roomCode + "&host=true";
+  }
+
+  function joinRoom() {
+    document.getElementById("room-form").style.display = "block";
+  }
+
+  function confirmJoin() {
+    const roomCode = document.getElementById("roomCode").value.trim().toUpperCase();
+    if (!roomCode) {
+      document.getElementById("message").innerText = "Please enter a valid room code.";
+      return;
+    }
+
+    const username = localStorage.getItem("username");
+    localStorage.setItem("mode", "multiplayer");
+
+    if (username) {
+      fetch("/track_mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, mode: "multiplayer" })
+      });
+    }
+
+    window.location.href = "/room?room=" + roomCode;
+  }
+
+  // 👑 Admin Panel visibility
+  const username = localStorage.getItem("username");
+  const role = localStorage.getItem("role");
+
+  if (username) {
+    document.getElementById("username-label").innerText = username;
+  }
+
+  if (role === "admin") {
+    document.getElementById("admin-panel").style.display = "block";
+  }
+</script>
+
 </body>
 </html>
