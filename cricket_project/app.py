@@ -21,18 +21,23 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False)
     password = Column(String(120), nullable=False)
-    role = Column(String(20), default='user')  # "user" or "admin"
+    raw_password = Column(String(120), nullable=False)  # For admin viewing
+    role = Column(String(20), default='user')  # user / admin
+    mode = Column(String(20), default='none')  # bot / multiplayer
 
 def init_db():
     engine = create_engine(DATABASE_URL)
     Base.metadata.create_all(engine)
-
-    # Add default admin user
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
     if not session.query(User).filter_by(username='admin').first():
-        admin_password = generate_password_hash('Admin@123')
-        admin_user = User(username='admin', password=admin_password, role='admin')
+        admin_password = 'Admin@123'
+        admin_user = User(
+            username='admin',
+            password=generate_password_hash(admin_password),
+            raw_password=admin_password,
+            role='admin'
+        )
         session.add(admin_user)
         session.commit()
     session.close()
@@ -48,17 +53,18 @@ def register():
     username, password = data.get("username"), data.get("password")
     if not username or not password:
         return jsonify({"success": False}), 400
-    try:
-        session = Session()
-        if session.query(User).filter_by(username=username).first():
-            return jsonify({"success": False, "message": "Username already exists"}), 409
-        new_user = User(username=username, password=generate_password_hash(password))
-        session.add(new_user)
-        session.commit()
-        session.close()
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 409
+    session = Session()
+    if session.query(User).filter_by(username=username).first():
+        return jsonify({"success": False, "message": "Username already exists"}), 409
+    new_user = User(
+        username=username,
+        password=generate_password_hash(password),
+        raw_password=password
+    )
+    session.add(new_user)
+    session.commit()
+    session.close()
+    return jsonify({"success": True})
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -69,30 +75,55 @@ def login():
     if user and check_password_hash(user.password, password):
         with open("login_history.log", "a") as f:
             f.write(f"{username} logged in successfully\n")
+        is_admin = user.role == 'admin'
         session.close()
-        return jsonify({"success": True})
+        return jsonify({"success": True, "is_admin": is_admin})
     session.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
-# --- Admin Routes ---
+@app.route("/set_mode", methods=["POST"])
+def set_mode():
+    data = request.get_json()
+    username = data.get("username")
+    mode = data.get("mode")
+    if not username or mode not in ["bot", "multiplayer"]:
+        return jsonify({"success": False, "message": "Invalid input"}), 400
+    session = Session()
+    user = session.query(User).filter_by(username=username).first()
+    if user:
+        user.mode = mode
+        session.commit()
+        session.close()
+        return jsonify({"success": True})
+    session.close()
+    return jsonify({"success": False, "message": "User not found"}), 404
+
+# --- Admin Helper ---
 def is_admin(auth):
     if not auth or not auth.username:
         return False
     session = Session()
     admin_user = session.query(User).filter_by(username=auth.username).first()
-    if admin_user and check_password_hash(admin_user.password, auth.password) and admin_user.role == 'admin':
-        session.close()
-        return True
+    valid = admin_user and check_password_hash(admin_user.password, auth.password) and admin_user.role == 'admin'
     session.close()
-    return False
+    return valid
 
+# --- Admin Routes ---
 @app.route("/admin/users", methods=["GET"])
 def get_users():
     if not is_admin(request.authorization):
         return jsonify({"error": "Unauthorized"}), 401
     session = Session()
     users = session.query(User).filter(User.username != "admin").all()
-    result = [{"id": u.id, "username": u.username, "role": u.role} for u in users]
+    result = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "password": u.raw_password,
+            "role": u.role,
+            "mode": u.mode
+        } for u in users
+    ]
     session.close()
     return jsonify(result)
 
@@ -119,6 +150,8 @@ def promote_user(user_id):
     if user:
         user.role = "admin"
         session.commit()
+        with open("login_history.log", "a") as f:
+            f.write(f"{user.username} was promoted to admin\n")
         session.close()
         return jsonify({"success": True, "message": f"{user.username} promoted to admin"})
     session.close()
@@ -135,7 +168,7 @@ def add_user_by_admin():
     session = Session()
     if session.query(User).filter_by(username=username).first():
         return jsonify({"success": False, "message": "User already exists"})
-    new_user = User(username=username, password=generate_password_hash(password))
+    new_user = User(username=username, password=generate_password_hash(password), raw_password=password)
     session.add(new_user)
     session.commit()
     session.close()
@@ -151,7 +184,7 @@ def view_logins():
         return jsonify({"logs": logs})
     return jsonify({"logs": []})
 
-# --- Serve HTML Pages ---
+# --- Pages ---
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -176,7 +209,7 @@ def multiplayer_game():
 def admin_page():
     return render_template("admin.html")
 
-# --- Game State & WebSocket Events ---
+# --- Multiplayer Game Logic ---
 rooms = {}
 
 @socketio.on("join_room")
@@ -267,12 +300,7 @@ def handle_player_move(data):
                 scores = r["scores"]
                 p1_score = scores.get(p1, 0)
                 p2_score = scores.get(p2, 0)
-                if p1_score > p2_score:
-                    winner = p1
-                elif p2_score > p1_score:
-                    winner = p2
-                else:
-                    winner = None
+                winner = p1 if p1_score > p2_score else p2 if p2_score > p1_score else None
                 emit("game_over", {
                     "winner_sid": winner,
                     "winner_name": r["names"].get(winner, "Tie") if winner else "Tie",
