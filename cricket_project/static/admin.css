@@ -1,0 +1,62 @@
+body {
+  background-color: #000010;
+  color: #00ffcc;
+  font-family: 'Press Start 2P', cursive;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #00ffcc;
+  margin-bottom: 30px;
+  text-shadow: 0 0 5px #00ffcc;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #000000cc;
+  border: 3px double #00ffcc;
+  box-shadow: 0 0 20px #00ffcc44;
+  margin-bottom: 30px;
+}
+
+th, td {
+  border: 1px solid #00ffcc88;
+  padding: 10px;
+  text-align: center;
+  font-size: 10px;
+}
+
+th {
+  background-color: #002222;
+  color: #00ffee;
+}
+
+tr:nth-child(even) {
+  background-color: #001818;
+}
+
+button {
+  background-color: #000;
+  border: 2px solid #00ffcc;
+  color: #00ffcc;
+  padding: 5px 10px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background-color: #00ffcc;
+  color: #000;
+}
+
+#message {
+  text-align: center;
+  font-size: 10px;
+  margin-top: 15px;
+  color: #cc0000;
+}
