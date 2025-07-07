@@ -25,6 +25,16 @@ class User(Base):
 def init_db():
     engine = create_engine(DATABASE_URL)
     Base.metadata.create_all(engine)
+
+    # Add default admin user
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+    if not session.query(User).filter_by(username='admin').first():
+        admin_password = generate_password_hash('Admin@123')
+        admin_user = User(username='admin', password=admin_password)
+        session.add(admin_user)
+        session.commit()
+    session.close()
     return engine
 
 engine = init_db()
@@ -55,6 +65,45 @@ def login():
     if user and check_password_hash(user.password, password):
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+# --- Admin Routes ---
+@app.route("/admin/users", methods=["GET"])
+def get_users():
+    auth = request.authorization
+    if not auth or auth.username != "admin":
+        return jsonify({"error": "Unauthorized"}), 401
+
+    session = Session()
+    admin = session.query(User).filter_by(username='admin').first()
+    if not admin or not check_password_hash(admin.password, auth.password):
+        session.close()
+        return jsonify({"error": "Unauthorized"}), 401
+
+    users = session.query(User).filter(User.username != "admin").all()
+    result = [{"id": u.id, "username": u.username} for u in users]
+    session.close()
+    return jsonify(result)
+
+@app.route("/admin/delete_user/<int:user_id>", methods=["DELETE"])
+def delete_user(user_id):
+    auth = request.authorization
+    if not auth or auth.username != "admin":
+        return jsonify({"error": "Unauthorized"}), 401
+
+    session = Session()
+    admin = session.query(User).filter_by(username='admin').first()
+    if not admin or not check_password_hash(admin.password, auth.password):
+        session.close()
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user = session.query(User).filter_by(id=user_id).first()
+    if user and user.username != "admin":
+        session.delete(user)
+        session.commit()
+        session.close()
+        return jsonify({"success": True})
+    session.close()
+    return jsonify({"success": False, "message": "User not found or cannot delete admin"})
 
 # --- Serve HTML Pages ---
 @app.route("/")
