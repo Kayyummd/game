@@ -75,11 +75,16 @@ def login():
     if user and check_password_hash(user.password, password):
         with open("login_history.log", "a") as f:
             f.write(f"{username} logged in successfully\n")
-        is_admin = user.role == 'admin'
+        role = user.role
         session.close()
-        return jsonify({"success": True, "is_admin": is_admin})
+        return jsonify({
+            "success": True,
+            "username": username,
+            "role": role  # 👈 important
+        })
     session.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
 
 @app.route("/set_mode", methods=["POST"])
 def set_mode():
