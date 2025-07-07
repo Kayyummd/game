@@ -6,9 +6,36 @@
   <title>Choose Mode - Hand Cricket</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    .admin-button {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .admin-button button {
+      background-color: black;
+      color: #00ffcc;
+      border: 2px solid #00ffcc;
+      padding: 8px 16px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .admin-button button:hover {
+      background-color: #00ffcc;
+      color: black;
+    }
+
+    #welcome {
+      font-size: 10px;
+      color: #00ffcc;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
+    <div id="welcome">Welcome, <span id="username-label">Player</span>!</div>
     <h1 class="title">🕹️ Choose Game Mode</h1>
 
     <div class="button-group">
@@ -26,15 +53,22 @@
       <button onclick="confirmJoin()" class="button-for-create-And-Join">Join</button>
       <p id="message"></p>
     </div>
+
+    <!-- 👑 Admin Panel Button -->
+    <div class="admin-button" id="admin-panel" style="display: none;">
+      <button onclick="window.location.href='/admin'">👑 Go to Admin Panel</button>
+    </div>
   </div>
 
   <script>
+    // 🎮 Bot mode
     function playBot() {
       alert("🎮 Starting solo game vs Bot...");
-      // Redirect to solo game
+      localStorage.setItem("mode", "bot");  // store mode for tracking
       window.location.href = "/game_bot";
     }
 
+    // 🎮 Friend multiplayer
     function showFriendOptions() {
       document.getElementById("friend-options").style.display = "block";
     }
@@ -42,7 +76,7 @@
     function createRoom() {
       const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       alert("🔑 Room Created: " + roomCode);
-      // You can redirect to a multiplayer room handler page with roomCode
+      localStorage.setItem("mode", "multiplayer"); // store mode
       window.location.href = "/room?room=" + roomCode + "&host=true";
     }
 
@@ -56,7 +90,20 @@
         document.getElementById("message").innerText = "Please enter a valid room code.";
         return;
       }
+      localStorage.setItem("mode", "multiplayer"); // store mode
       window.location.href = "/room?room=" + roomCode;
+    }
+
+    // 👑 Check if user is admin
+    const username = localStorage.getItem("username");
+    const role = localStorage.getItem("role");
+
+    if (username) {
+      document.getElementById("username-label").innerText = username;
+    }
+
+    if (role === "admin") {
+      document.getElementById("admin-panel").style.display = "block";
     }
   </script>
 </body>
