@@ -25,12 +25,16 @@ function login() {
     if (data.success) {
       showMessage("Login successful! 🎉", true);
 
+      // 🧠 Save session details locally
+      localStorage.setItem("username", data.username || username);
+      localStorage.setItem("role", data.role || "user");
+      localStorage.setItem("mode", data.mode || "unknown");
+
       setTimeout(() => {
-        // ✅ Route to /admin if admin user
-        if (username.toLowerCase() === "admin") {
+        if (data.role === "admin") {
           window.location.href = "/admin";
         } else {
-          window.location.href = "/game";  // regular user route
+          window.location.href = "/game";
         }
       }, 1000);
     } else {
