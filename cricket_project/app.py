@@ -21,6 +21,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False)
     password = Column(String(120), nullable=False)
+    role = Column(String(20), default='user')  # "user" or "admin"
 
 def init_db():
     engine = create_engine(DATABASE_URL)
@@ -31,7 +32,7 @@ def init_db():
     session = SessionLocal()
     if not session.query(User).filter_by(username='admin').first():
         admin_password = generate_password_hash('Admin@123')
-        admin_user = User(username='admin', password=admin_password)
+        admin_user = User(username='admin', password=admin_password, role='admin')
         session.add(admin_user)
         session.commit()
     session.close()
@@ -49,9 +50,12 @@ def register():
         return jsonify({"success": False}), 400
     try:
         session = Session()
+        if session.query(User).filter_by(username=username).first():
+            return jsonify({"success": False, "message": "Username already exists"}), 409
         new_user = User(username=username, password=generate_password_hash(password))
         session.add(new_user)
         session.commit()
+        session.close()
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 409
@@ -63,39 +67,40 @@ def login():
     session = Session()
     user = session.query(User).filter_by(username=username).first()
     if user and check_password_hash(user.password, password):
+        with open("login_history.log", "a") as f:
+            f.write(f"{username} logged in successfully\n")
+        session.close()
         return jsonify({"success": True})
+    session.close()
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 # --- Admin Routes ---
+def is_admin(auth):
+    if not auth or not auth.username:
+        return False
+    session = Session()
+    admin_user = session.query(User).filter_by(username=auth.username).first()
+    if admin_user and check_password_hash(admin_user.password, auth.password) and admin_user.role == 'admin':
+        session.close()
+        return True
+    session.close()
+    return False
+
 @app.route("/admin/users", methods=["GET"])
 def get_users():
-    auth = request.authorization
-    if not auth or auth.username != "admin":
+    if not is_admin(request.authorization):
         return jsonify({"error": "Unauthorized"}), 401
-
     session = Session()
-    admin = session.query(User).filter_by(username='admin').first()
-    if not admin or not check_password_hash(admin.password, auth.password):
-        session.close()
-        return jsonify({"error": "Unauthorized"}), 401
-
     users = session.query(User).filter(User.username != "admin").all()
-    result = [{"id": u.id, "username": u.username} for u in users]
+    result = [{"id": u.id, "username": u.username, "role": u.role} for u in users]
     session.close()
     return jsonify(result)
 
 @app.route("/admin/delete_user/<int:user_id>", methods=["DELETE"])
 def delete_user(user_id):
-    auth = request.authorization
-    if not auth or auth.username != "admin":
+    if not is_admin(request.authorization):
         return jsonify({"error": "Unauthorized"}), 401
-
     session = Session()
-    admin = session.query(User).filter_by(username='admin').first()
-    if not admin or not check_password_hash(admin.password, auth.password):
-        session.close()
-        return jsonify({"error": "Unauthorized"}), 401
-
     user = session.query(User).filter_by(id=user_id).first()
     if user and user.username != "admin":
         session.delete(user)
@@ -103,7 +108,48 @@ def delete_user(user_id):
         session.close()
         return jsonify({"success": True})
     session.close()
-    return jsonify({"success": False, "message": "User not found or cannot delete admin"})
+    return jsonify({"success": False, "message": "Cannot delete admin or user not found"})
+
+@app.route("/admin/promote/<int:user_id>", methods=["POST"])
+def promote_user(user_id):
+    if not is_admin(request.authorization):
+        return jsonify({"error": "Unauthorized"}), 401
+    session = Session()
+    user = session.query(User).filter_by(id=user_id).first()
+    if user:
+        user.role = "admin"
+        session.commit()
+        session.close()
+        return jsonify({"success": True, "message": f"{user.username} promoted to admin"})
+    session.close()
+    return jsonify({"success": False, "message": "User not found"})
+
+@app.route("/admin/add_user", methods=["POST"])
+def add_user_by_admin():
+    if not is_admin(request.authorization):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json()
+    username, password = data.get("username"), data.get("password")
+    if not username or not password:
+        return jsonify({"success": False, "message": "Username and password required"})
+    session = Session()
+    if session.query(User).filter_by(username=username).first():
+        return jsonify({"success": False, "message": "User already exists"})
+    new_user = User(username=username, password=generate_password_hash(password))
+    session.add(new_user)
+    session.commit()
+    session.close()
+    return jsonify({"success": True, "message": "User added successfully"})
+
+@app.route("/admin/logins", methods=["GET"])
+def view_logins():
+    if not is_admin(request.authorization):
+        return jsonify({"error": "Unauthorized"}), 401
+    if os.path.exists("login_history.log"):
+        with open("login_history.log", "r") as f:
+            logs = f.readlines()
+        return jsonify({"logs": logs})
+    return jsonify({"logs": []})
 
 # --- Serve HTML Pages ---
 @app.route("/")
@@ -130,7 +176,7 @@ def multiplayer_game():
 def admin_page():
     return render_template("admin.html")
 
-# --- Game State ---
+# --- Game State & WebSocket Events ---
 rooms = {}
 
 @socketio.on("join_room")
@@ -179,14 +225,11 @@ def handle_toss(data):
     r = rooms.get(room)
     if not r:
         return
-
     result = random.choice(["Head", "Tail"])
     winner = "host" if choice == result else "guest"
-
     r["toss_choice"] = choice
     r["toss_result"] = result
     r["toss_winner"] = winner
-
     emit("toss_result", {"result": result, "winner": winner}, room=room)
 
 @socketio.on("bat_bowl_choice")
@@ -197,12 +240,10 @@ def handle_bat_bowl(data):
     r = rooms.get(room)
     if not r:
         return
-
     if choice == "Bat":
         r["bat_first_sid"] = sid
     else:
         r["bat_first_sid"] = next(p for p in r["players"] if p != sid)
-
     emit("game_start", {"bat_first_sid": r["bat_first_sid"], "usernames": r["names"]}, room=room)
 
 @socketio.on("player_move")
@@ -213,33 +254,16 @@ def handle_player_move(data):
     r = rooms.get(room)
     if not r:
         return
-
     r["moves"][sid] = move
-
     if len(r["moves"]) == 2:
         p1, p2 = r["players"]
         m1, m2 = r["moves"][p1], r["moves"][p2]
-
         batter_sid = r["bat_first_sid"] if r["innings"] == 1 else next(p for p in r["players"] if p != r["bat_first_sid"])
-
         if m1 == m2:
             if r["innings"] == 1:
                 r["target"] = r["scores"].get(batter_sid, 0) + 1
                 r["innings"] = 2
-                emit("round_result", {
-                    "type": "out",
-                    "num": m1,
-                    "moves": {p1: m1, p2: m2},
-                    "usernames": r["names"]
-                }, room=room)
             else:
-                emit("round_result", {
-                    "type": "out",
-                    "num": m1,
-                    "moves": {p1: m1, p2: m2},
-                    "usernames": r["names"]
-                }, room=room)
-
                 scores = r["scores"]
                 p1_score = scores.get(p1, 0)
                 p2_score = scores.get(p2, 0)
@@ -249,37 +273,32 @@ def handle_player_move(data):
                     winner = p2
                 else:
                     winner = None
-
                 emit("game_over", {
                     "winner_sid": winner,
                     "winner_name": r["names"].get(winner, "Tie") if winner else "Tie",
                     "usernames": r["names"]
                 }, room=room)
                 r["target"] = None
+            emit("round_result", {
+                "type": "out",
+                "num": m1,
+                "moves": {p1: m1, p2: m2},
+                "usernames": r["names"]
+            }, room=room)
         else:
             if batter_sid == p1:
                 r["scores"][p1] = r["scores"].get(p1, 0) + m1
             else:
                 r["scores"][p2] = r["scores"].get(p2, 0) + m2
-
-            if r["innings"] == 2 and r["target"] is not None:
-                if r["scores"].get(batter_sid, 0) >= r["target"]:
-                    emit("round_result", {
-                        "type": "continue",
-                        "moves": {p1: m1, p2: m2},
-                        "usernames": r["names"],
-                        "target": r["target"],
-                        "scores": r["scores"]
-                    }, room=room)
-                    emit("game_over", {
-                        "winner_sid": batter_sid,
-                        "winner_name": r["names"].get(batter_sid, "Player"),
-                        "usernames": r["names"]
-                    }, room=room)
-                    r["target"] = None
-                    r["moves"] = {}
-                    return
-
+            if r["innings"] == 2 and r["target"] is not None and r["scores"].get(batter_sid, 0) >= r["target"]:
+                emit("game_over", {
+                    "winner_sid": batter_sid,
+                    "winner_name": r["names"].get(batter_sid, "Player"),
+                    "usernames": r["names"]
+                }, room=room)
+                r["target"] = None
+                r["moves"] = {}
+                return
             emit("round_result", {
                 "type": "continue",
                 "moves": {p1: m1, p2: m2},
@@ -287,7 +306,6 @@ def handle_player_move(data):
                 "target": r["target"],
                 "scores": r["scores"]
             }, room=room)
-
         r["moves"] = {}
 
 @socketio.on("send_message")
