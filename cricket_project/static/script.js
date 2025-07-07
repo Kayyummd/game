@@ -17,14 +17,17 @@ function login() {
     },
     body: JSON.stringify({ username, password })
   })
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error("Invalid credentials");
+    return res.json();
+  })
   .then(data => {
     if (data.success) {
       showMessage("Login successful! 🎉", true);
 
       setTimeout(() => {
-        // ✅ Admin redirect
-        if (username === "admin" && password === "Admin@123") {
+        // ✅ Route to /admin if admin user
+        if (username.toLowerCase() === "admin") {
           window.location.href = "/admin";
         } else {
           window.location.href = "/game";  // regular user route
@@ -34,7 +37,10 @@ function login() {
       showMessage(data.message || "Login failed.");
     }
   })
-  .catch(() => showMessage("Server error. Please try again."));
+  .catch(err => {
+    console.error(err);
+    showMessage("Login failed: " + (err.message || "Server error."));
+  });
 }
 
 // 🧾 Register function
@@ -62,11 +68,27 @@ function register() {
       showMessage(data.message || "Registration failed.");
     }
   })
-  .catch(() => showMessage("Server error. Please try again."));
+  .catch(err => {
+    console.error(err);
+    showMessage("Registration error: " + (err.message || "Server issue"));
+  });
 }
 
-// 🔔 Display message to user
+// 🔔 Show feedback message
 function showMessage(msg, success = false) {
   message.innerText = msg;
   message.style.color = success ? "#00cc00" : "#cc0000";
+  message.style.opacity = 1;
+
+  // Optional fade out after 4 seconds
+  setTimeout(() => {
+    message.style.opacity = 0;
+  }, 4000);
 }
+
+// ⌨️ Allow pressing "Enter" to trigger login
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    login();
+  }
+});
