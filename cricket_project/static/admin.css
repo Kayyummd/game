@@ -71,6 +71,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+td button {
+  margin: 2px;
+}
+
 /* Forms */
 .form-section {
   text-align: center;
@@ -104,6 +108,14 @@ input[type="password"]::placeholder {
   text-shadow: 0 0 3px #ffcc00;
 }
 
+/* Differentiate status success and error if needed */
+.status-success {
+  color: #00ff88 !important;
+}
+.status-error {
+  color: #ff4444 !important;
+}
+
 /* Logs Output */
 pre#log-output {
   background: #001010;
@@ -134,5 +146,10 @@ pre#log-output {
 
   button {
     font-size: 9px;
+  }
+
+  th:nth-child(3), td:nth-child(3), /* Password */
+  th:nth-child(5), td:nth-child(5)  /* Mode */ {
+    display: none; /* Optional: hide Password & Mode on mobile */
   }
 }
