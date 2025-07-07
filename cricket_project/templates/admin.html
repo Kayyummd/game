@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>🛠️ Admin Dashboard - Hand Cricket</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
   <style>
     body {
       margin: 0;
@@ -13,28 +12,29 @@
       background: #000;
       color: #00ffcc;
     }
-    h1 {
+    h1, h2 {
       text-align: center;
-      font-size: 18px;
-      margin-bottom: 20px;
+      font-size: 16px;
+      margin-bottom: 15px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 10px;
     }
     th, td {
       border: 1px solid #00ffcc;
-      padding: 10px;
+      padding: 6px;
       text-align: center;
     }
     button {
       background-color: #000;
       color: #00ffcc;
       border: 2px solid #00ffcc;
-      padding: 5px 10px;
+      padding: 4px 8px;
       font-family: 'Press Start 2P', cursive;
       cursor: pointer;
+      font-size: 10px;
     }
     button:hover {
       background-color: #00ffcc;
@@ -44,77 +44,149 @@
       margin: 10px 0;
       text-align: center;
       color: #ffcc00;
+      font-size: 12px;
+    }
+    .form-section {
+      margin: 20px auto;
+      text-align: center;
+    }
+    input[type="text"], input[type="password"] {
+      padding: 6px;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 5px;
+      font-size: 12px;
+    }
+    pre {
+      background: #111;
+      color: #0f0;
+      border: 1px solid #0f0;
+      padding: 10px;
+      overflow-x: auto;
+      max-height: 300px;
+      font-size: 10px;
     }
   </style>
 </head>
 <body>
+
   <h1>🛡️ Admin Panel - Manage Users</h1>
   <div id="status">Loading users...</div>
+
   <table id="user-table" style="display:none;">
     <thead>
       <tr>
         <th>ID</th>
         <th>Username</th>
-        <th>Action</th>
+        <th>Role</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="user-body"></tbody>
   </table>
 
+  <div class="form-section">
+    <h2>➕ Add New User</h2>
+    <input type="text" id="new-username" placeholder="Username">
+    <input type="password" id="new-password" placeholder="Password">
+    <button onclick="addUser()">Add User</button>
+  </div>
+
+  <div class="form-section">
+    <h2>📜 Login History</h2>
+    <button onclick="loadLogins()">View Logs</button>
+    <pre id="log-output"></pre>
+  </div>
+
   <script>
     const username = prompt("Enter admin username:");
     const password = prompt("Enter admin password:");
 
+    function authHeader() {
+      return {
+        'Authorization': 'Basic ' + btoa(username + ":" + password),
+        'Content-Type': 'application/json'
+      };
+    }
+
     function loadUsers() {
-      fetch('/admin/users', {
-        headers: {
-          'Authorization': 'Basic ' + btoa(username + ":" + password)
-        }
-      })
-      .then(res => {
-        if (!res.ok) throw new Error("Unauthorized or failed to fetch users.");
-        return res.json();
-      })
-      .then(data => {
-        document.getElementById("status").innerText = "User list loaded.";
-        document.getElementById("user-table").style.display = "table";
-        const tbody = document.getElementById("user-body");
-        tbody.innerHTML = '';
-        data.forEach(user => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${user.id}</td>
-            <td>${user.username}</td>
-            <td><button onclick="deleteUser(${user.id})">Delete</button></td>
-          `;
-          tbody.appendChild(row);
+      fetch('/admin/users', { headers: authHeader() })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("status").innerText = "User list loaded.";
+          document.getElementById("user-table").style.display = "table";
+          const tbody = document.getElementById("user-body");
+          tbody.innerHTML = '';
+          data.forEach(user => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${user.id}</td>
+              <td>${user.username}</td>
+              <td>${user.role}</td>
+              <td>
+                <button onclick="deleteUser(${user.id})">Delete</button>
+                ${user.role !== 'admin' ? `<button onclick="promoteUser(${user.id})">Promote</button>` : ''}
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(err => {
+          document.getElementById("status").innerText = "Failed to load users.";
         });
-      })
-      .catch(err => {
-        document.getElementById("status").innerText = err.message;
-      });
     }
 
     function deleteUser(id) {
       if (!confirm("Are you sure you want to delete this user?")) return;
       fetch(`/admin/delete_user/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': 'Basic ' + btoa(username + ":" + password)
-        }
+        headers: authHeader()
       })
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
-          document.getElementById("status").innerText = "User deleted successfully.";
-          loadUsers();
-        } else {
-          document.getElementById("status").innerText = "Failed to delete user.";
-        }
-      })
-      .catch(err => {
-        document.getElementById("status").innerText = err.message;
+        document.getElementById("status").innerText = data.success ? "User deleted." : "Delete failed.";
+        loadUsers();
       });
+    }
+
+    function promoteUser(id) {
+      if (!confirm("Promote this user to admin?")) return;
+      fetch(`/admin/promote/${id}`, {
+        method: 'POST',
+        headers: authHeader()
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("status").innerText = data.message;
+        loadUsers();
+      });
+    }
+
+    function addUser() {
+      const uname = document.getElementById("new-username").value;
+      const pwd = document.getElementById("new-password").value;
+      if (!uname || !pwd) {
+        document.getElementById("status").innerText = "Please fill in both fields.";
+        return;
+      }
+      fetch('/admin/add_user', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ username: uname, password: pwd })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("status").innerText = data.message;
+        loadUsers();
+      });
+    }
+
+    function loadLogins() {
+      fetch('/admin/logins', { headers: authHeader() })
+        .then(res => res.json())
+        .then(data => {
+          const logs = data.logs.join('');
+          document.getElementById("log-output").textContent = logs || "No logs available.";
+        });
     }
 
     loadUsers();
