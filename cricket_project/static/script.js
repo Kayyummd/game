@@ -1,4 +1,3 @@
-
 const message = document.getElementById("message");
 
 // 🔐 Login function
@@ -22,8 +21,14 @@ function login() {
   .then(data => {
     if (data.success) {
       showMessage("Login successful! 🎉", true);
+
       setTimeout(() => {
-        window.location.href = "/game";  // Redirect to game screen
+        // ✅ Admin redirect
+        if (username === "admin" && password === "Admin@123") {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/game";  // regular user route
+        }
       }, 1000);
     } else {
       showMessage(data.message || "Login failed.");
@@ -64,4 +69,4 @@ function register() {
 function showMessage(msg, success = false) {
   message.innerText = msg;
   message.style.color = success ? "#00cc00" : "#cc0000";
-}script
+}
