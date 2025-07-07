@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🛠️ Admin Dashboard - Hand Cricket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Press Start 2P', cursive;
+      background: #000;
+      color: #00ffcc;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #00ffcc;
+      padding: 10px;
+      text-align: center;
+    }
+    button {
+      background-color: #000;
+      color: #00ffcc;
+      border: 2px solid #00ffcc;
+      padding: 5px 10px;
+      font-family: 'Press Start 2P', cursive;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00ffcc;
+      color: #000;
+    }
+    #status {
+      margin: 10px 0;
+      text-align: center;
+      color: #ffcc00;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Admin Panel - Manage Users</h1>
+  <div id="status">Loading users...</div>
+  <table id="user-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="user-body"></tbody>
+  </table>
+
+  <script>
+    const username = prompt("Enter admin username:");
+    const password = prompt("Enter admin password:");
+
+    function loadUsers() {
+      fetch('/admin/users', {
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ":" + password)
+        }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Unauthorized or failed to fetch users.");
+        return res.json();
+      })
+      .then(data => {
+        document.getElementById("status").innerText = "User list loaded.";
+        document.getElementById("user-table").style.display = "table";
+        const tbody = document.getElementById("user-body");
+        tbody.innerHTML = '';
+        data.forEach(user => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td><button onclick="deleteUser(${user.id})">Delete</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      })
+      .catch(err => {
+        document.getElementById("status").innerText = err.message;
+      });
+    }
+
+    function deleteUser(id) {
+      if (!confirm("Are you sure you want to delete this user?")) return;
+      fetch(`/admin/delete_user/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ":" + password)
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById("status").innerText = "User deleted successfully.";
+          loadUsers();
+        } else {
+          document.getElementById("status").innerText = "Failed to delete user.";
+        }
+      })
+      .catch(err => {
+        document.getElementById("status").innerText = err.message;
+      });
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>
