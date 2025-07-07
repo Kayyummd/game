@@ -304,6 +304,18 @@
     box.appendChild(line);
     box.scrollTop = box.scrollHeight;
   });
+  <script>
+  const username = localStorage.getItem("username");
+
+  if (username) {
+    fetch("/track_mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username, mode: "multiplayer" })
+    });
+  }
+</script>
+
 </script>
 
 </body>
