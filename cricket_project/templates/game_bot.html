@@ -429,6 +429,15 @@
       userSide.innerHTML = userBatting ? batsman : bowler;
       botSide.innerHTML = userBatting ? bowler : batsman;
     }
+    const username = localStorage.getItem("username");
+if (username) {
+  fetch("/track_mode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: username, mode: "bot" })
+  });
+}
+
   </script>
 </body>
 </html>
