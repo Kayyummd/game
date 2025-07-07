@@ -126,6 +126,10 @@ def room():
 def multiplayer_game():
     return render_template("multiplayer_game.html")
 
+@app.route("/admin")
+def admin_page():
+    return render_template("admin.html")
+
 # --- Game State ---
 rooms = {}
 
