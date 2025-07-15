@@ -1,278 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>🎮 Hand Cricket Multiplayer Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <title>🎮 Hand Cricket Multiplayer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: 'Press Start 2P', cursive;
-      background: black;
-      overflow: hidden;
-      color: #00ffcc;
+      margin:0; padding:0; height:100%;
+      font-family:'Press Start 2P',cursive;
+      background:#000; color:#0ff;
+      overflow:hidden;
     }
-
     .top-bar {
-      width: 100%;
-      padding: 10px;
-      background-color: #000000cc;
-      text-align: center;
-      font-size: 12px;
-      border-bottom: 2px solid #00ffcc;
-      z-index: 10;
-      position: relative;
+      padding:10px; text-align:center; font-size:12px;
+      background:#0008; border-bottom:2px solid #0ff;
     }
-
-    .game-wrapper {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 1000px;
-      margin: auto;
-      z-index: 10;
-      position: relative;
+    .container {
+      display:flex; justify-content:center; align-items:flex-start;
+      gap:20px; padding:20px;
     }
-
-    .game-container {
-      flex: 3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 20px;
-      padding: 10px;
-      background-color: #000000cc;
-      box-shadow: 0 0 25px #00ffcc;
-      border: 4px double #00ffcc;
+    .game, .chat {
+      background:#0008; border:3px solid #0ff; padding:15px;
+      box-shadow:0 0 15px #0ff;
     }
-
-    .chat-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin: 20px 10px 20px 0;
-      padding: 10px;
-      background-color: #000000cc;
-      border: 4px double #00ffcc;
-      max-height: 500px;
+    .game { flex:3; text-align:center; }
+    .chat { flex:1; display:flex; flex-direction:column; max-height:500px; }
+    #history, #chat-messages { overflow-y:auto; font-size:10px; flex:1; margin-bottom:10px; }
+    #history li, #chat-messages div { margin:4px 0; }
+    button, input {
+      font-family:inherit; background:#000; color:#0ff;
+      border:2px solid #0ff; padding:5px; font-size:10px;
     }
-
-    #chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      font-size: 10px;
-      margin-bottom: 10px;
-    }
-
-    #chat-input {
-      display: flex;
-    }
-
-    #chat-input input,
-    #chat-input button,
-    button {
-      font-family: 'Press Start 2P', cursive;
-      background-color: #000;
-      color: #00ffcc;
-      border: 2px solid #00ffcc;
-      padding: 5px;
-      font-size: 10px;
-    }
-
-    #chat-input input {
-      flex: 1;
-    }
-
-    #chat-input button, button {
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #00ffcc;
-      color: #000;
-    }
-
-    #history {
-      max-height: 200px;
-      overflow-y: auto;
-      margin: 10px 0;
-      font-size: 10px;
-      width: 100%;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .confetti {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 999;
-    }
+    button:hover, input:focus { background:#0ff; color:#000; }
+    .hidden { display:none; }
+    .confetti { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999; }
   </style>
 </head>
 <body>
+  <div class="top-bar" id="top-usernames">Player1 vs Player2</div>
 
-  <!-- Game UI -->
-  <div class="top-bar" id="top-usernames">Player 1 vs Player 2</div>
+  <div class="container">
+    <div class="game">
+      <div id="status">Waiting for players...</div>
 
-  <div class="game-wrapper">
-    <div class="game-container" id="game">
-      <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
-      <h2 id="game-status">🕹️ Get Ready...</h2>
+      <div id="toss" class="hidden">
+        <p>Select Head or Tail</p>
+        <button onclick="doToss('Head')">Head</button>
+        <button onclick="doToss('Tail')">Tail</button>
+      </div>
 
-      <div id="play-buttons" class="hidden">
-        <p>🎯 Choose your number:</p>
+      <div id="batbowl" class="hidden">
+        <p>You won toss! Bat or Bowl?</p>
+        <button onclick="choose('Bat')">Bat</button>
+        <button onclick="choose('Bowl')">Bowl</button>
+      </div>
+
+      <div id="play" class="hidden">
+        <p>Choose a number 0‑5</p>
         <div>
-          <button onclick="playNum(0)">0</button>
-          <button onclick="playNum(1)">1</button>
-          <button onclick="playNum(2)">2</button>
-          <button onclick="playNum(3)">3</button>
-          <button onclick="playNum(4)">4</button>
-          <button onclick="playNum(5)">5</button>
+          <button onclick="play(0)">0</button>
+          <button onclick="play(1)">1</button>
+          <button onclick="play(2)">2</button>
+          <button onclick="play(3)">3</button>
+          <button onclick="play(4)">4</button>
+          <button onclick="play(5)">5</button>
         </div>
       </div>
 
-      <div>
-        <h3>📜 Scoreboard</h3>
-        <ul id="history" style="list-style:none; padding-left:0;"></ul>
-      </div>
+      <h4 id="target" class="hidden">🎯 Target: --</h4>
 
-      <button id="reset-btn" class="hidden">⟲ Reset</button>
+      <h4>Scoreboard</h4>
+      <ul id="history"></ul>
+
+      <button id="reset" class="hidden">Restart Game</button>
       <div class="confetti" id="confetti"></div>
     </div>
 
-    <div class="chat-box">
-      <h3>💬 Chat</h3>
+    <div class="chat">
+      <h4>Chat</h4>
       <div id="chat-messages"></div>
-      <div id="chat-input">
-        <input type="text" id="chatText" placeholder="Type your message..." />
-        <button onclick="sendMessage()">Send</button>
+      <div>
+        <input id="chat-input" placeholder="Type your message..."/>
+        <button onclick="sendChat()">Send</button>
       </div>
     </div>
   </div>
 
-  <!-- Game Logic -->
   <script>
     const socket = io();
-    const room = new URLSearchParams(window.location.search).get('room');
-    const username = new URLSearchParams(window.location.search).get('username');
-    let opponent = 'Opponent';
-    let mySocketId = null;
-    let isBatting = false;
-    let isMyTurn = false;
-    let myScore = 0;
-    let target = null;
-    let history = [];
+    const params = new URLSearchParams(location.search);
+    const room = params.get('room');
+    const username = params.get('username') || 'Player';
+    let myId, battingSid;
 
+    // Join room
     socket.on('connect', () => {
-      mySocketId = socket.id;
-      socket.emit('join_room', { room, username });
+      myId = socket.id;
+      socket.emit('join_room', {room, username});
     });
 
-    socket.on('usernames', data => {
-      const { player1, player2 } = data;
-      document.getElementById("top-usernames").innerText = `${player1} vs ${player2}`;
-      opponent = (username === player1) ? player2 : player1;
+    // Update usernames
+    socket.on('usernames', ({player1,player2})=>{
+      document.getElementById('top-usernames').textContent = `${player1} vs ${player2}`;
+      document.getElementById('status').textContent = 'Waiting for toss...';
+      document.getElementById('toss').classList.remove('hidden');
     });
 
-    socket.on('start_game', data => {
-      isBatting = data.batting_sid === mySocketId;
-      isMyTurn = isBatting;
-      document.getElementById('game-status').innerText = isBatting ? "You're Batting" : "You're Bowling";
-      document.getElementById('play-buttons').classList.remove('hidden');
+    // Toss result
+    function doToss(choice){ socket.emit('toss_choice',{room,choice}); }
+    socket.on('toss_result', data => {
+      const won = (data.winner==='host' && myId===socket.id) || (data.winner==='guest' && myId!==socket.id);
+      document.getElementById('toss').classList.add('hidden');
+      document.getElementById('status').textContent = `Toss: ${data.result}. ${won?'You':'Opponent'} won.`;
+      if(won) document.getElementById('batbowl').classList.remove('hidden');
     });
 
-    function playNum(n) {
-      if (!isMyTurn) return;
-      socket.emit('play_move', { room, move: n });
-      isMyTurn = false;
-      document.getElementById('play-buttons').classList.add('hidden');
-      document.getElementById('game-status').innerText = "Waiting for opponent...";
+    // Bat or bowl
+    function choose(choice){ socket.emit('bat_bowl_choice',{room,choice}); }
+    socket.on('game_start', data => {
+      battingSid = data.bat_first_sid;
+      document.getElementById('batbowl').classList.add('hidden');
+      document.getElementById('status').textContent = 'Game started!';
+      showPlay();
+    });
+
+    // Show play buttons
+    function showPlay(){
+      document.getElementById('play').classList.remove('hidden');
+      document.getElementById('status').textContent = (myId===battingSid)?'You are batting':'You are bowling';
     }
 
+    // Play number
+    function play(n){
+      socket.emit('player_move',{room,move:n});
+      document.getElementById('play').classList.add('hidden');
+      document.getElementById('status').textContent = 'Waiting for opponent...';
+    }
+
+    // Handle rounds & results
     socket.on('round_result', data => {
-      const { moves, result, runs, out, turn, inning, winner, target_score } = data;
-      const myMove = moves[mySocketId];
-      const otherId = Object.keys(moves).find(id => id !== mySocketId);
-      const oppMove = moves[otherId];
+      const {moves,type, scores, target: tgt} = data;
+      const other = Object.keys(moves).find(id=>id!==myId);
+      const myMove = moves[myId], hisMove = moves[other];
+      const out = type==='out';
+      let line = `You:${myMove} Opp:${hisMove} ${out?'— OUT!':''}`;
+      if(scores){
+        line += ` | Score: ${scores[myId]||(0)}`;
+      }
+      const li = document.createElement('li'); li.textContent=line;
+      document.getElementById('history').appendChild(li);
 
-      let msg = `You: ${myMove} | ${opponent}: ${oppMove}`;
-      if (out) msg += " — OUT!";
-      if (runs !== undefined && !out && isBatting) {
-        myScore += runs;
-        msg += ` +${runs} runs`;
+      if(tgt!==undefined){
+        document.getElementById('target').classList.remove('hidden');
+        document.getElementById('target').textContent=`🎯 Target: ${tgt}`;
       }
 
-      history.push(msg);
-      document.getElementById('history').innerHTML = history.map(m => `<li>${m}</li>`).join('');
-
-      if (target_score !== undefined) {
-        target = target_score;
-        document.getElementById("target-display").style.display = "block";
-        document.getElementById("target-display").innerText = `🎯 Target: ${target}`;
-      }
-
-      if (winner) {
-        document.getElementById('game-status').innerText = (winner === username) ? "🎉 You Win!" : "💀 You Lose!";
-        document.getElementById('reset-btn').classList.remove('hidden');
-        if (winner === username) confettiEffect();
+      if(data.game_over){
+        endGame(data.winner_sid===myId);
       } else {
-        isMyTurn = (turn === mySocketId);
-        document.getElementById('play-buttons').classList.toggle('hidden', !isMyTurn);
-        document.getElementById('game-status').innerText = isMyTurn
-          ? (isBatting ? "You're Batting" : "You're Bowling")
-          : "Waiting for opponent...";
+        showPlay();
       }
     });
 
-    document.getElementById('reset-btn').onclick = () => {
-      location.reload();
-    };
-
-    // Chat
-    function sendMessage() {
-      const msg = document.getElementById("chatText").value;
-      if (msg.trim()) {
-        socket.emit("chat", { room, user: username, message: msg });
-        document.getElementById("chatText").value = "";
-      }
+    // Handle final game over
+    function endGame(win){
+      document.getElementById('status').textContent = win ? '🎉 You Win!' : '💀 You Lose!';
+      document.getElementById('reset').classList.remove('hidden');
+      if(win) playConfetti();
     }
 
-    socket.on("chat", data => {
-      const div = document.createElement("div");
-      div.innerText = `${data.user}: ${data.message}`;
-      document.getElementById("chat-messages").appendChild(div);
-      document.getElementById("chat-messages").scrollTop = document.getElementById("chat-messages").scrollHeight;
+    document.getElementById('reset').onclick = ()=>location.reload();
+
+    // Chat functionality
+    function sendChat(){
+      const msg = document.getElementById('chat-input').value.trim();
+      if(!msg) return;
+      socket.emit('send_message',{room,user:username,message:msg});
+      document.getElementById('chat-input').value='';
+    }
+
+    socket.on('receive_message', data=>{
+      const div = document.createElement('div');
+      div.textContent = `${data.username}: ${data.message}`;
+      document.getElementById('chat-messages').appendChild(div);
+      document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
     });
 
-    function confettiEffect() {
-      const duration = 2 * 1000;
-      const end = Date.now() + duration;
-      (function frame() {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 }
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 }
-        });
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
+    // Confetti
+    function playConfetti(){
+      const end = Date.now()+2000;
+      (function f(){
+        confetti({startVelocity:30,spread:360,particleCount:10,origin:{x:Math.random(),y:Math.random()}});
+        if(Date.now()<end) requestAnimationFrame(f);
       })();
     }
   </script>
