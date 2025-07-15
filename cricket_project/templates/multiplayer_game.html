@@ -3,103 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <title>🎮 Hand Cricket Multiplayer Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
       font-family: 'Press Start 2P', cursive;
       background: #111;
-      background-image:
-        radial-gradient(#ffcc00 1px, transparent 1px),
-        radial-gradient(#ffcc00 1px, transparent 1px);
-      background-position: 0 0, 10px 10px;
-      background-size: 20px 20px;
       color: #ffcc00;
       margin: 0;
       padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      animation: pulse 8s infinite ease-in-out;
     }
-
-    @keyframes pulse {
-      0%, 100% { background-color: #111; }
-      50% { background-color: #1c1c1c; }
-    }
-
-    .top-bar {
-      width: 100%;
-      padding: 10px;
-      background-color: #222;
-      color: #ffcc00;
-      text-align: center;
-      font-size: 12px;
-      border-bottom: 2px solid #ffcc00;
-    }
-
-    .game-wrapper {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 1000px;
-    }
-
     .game-container {
-      flex: 3;
       display: none;
       flex-direction: column;
       align-items: center;
-      margin: 20px;
+      margin-top: 20px;
+      width: 90%;
+      max-width: 800px;
+      border: 4px double #ffcc00;
       padding: 10px;
       background-color: #000;
-      box-shadow: 0 0 25px #ffcc00, 0 0 50px #ffcc00;
-      border: 4px double #ffcc00;
+      box-shadow: 0 0 20px #ffcc00;
     }
-
-    .chat-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin: 20px 10px 20px 0;
-      padding: 10px;
-      background-color: #000;
-      border: 4px double #ffcc00;
-      max-height: 500px;
-    }
-
-    #chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      font-size: 10px;
-      margin-bottom: 10px;
-    }
-
-    #chat-input {
-      display: flex;
-    }
-
-    #chat-input input {
-      flex: 1;
-      padding: 5px;
-      font-family: 'Press Start 2P', cursive;
-      font-size: 10px;
-      background-color: #222;
-      color: #ffcc00;
-      border: 1px solid #ffcc00;
-    }
-
-    #chat-input button {
-      background-color: #222;
-      color: #ffcc00;
-      border: 1px solid #ffcc00;
-      font-size: 10px;
-      cursor: pointer;
-      padding: 5px;
-    }
-
     button {
       background-color: #222;
       color: #ffcc00;
@@ -109,12 +39,13 @@
       margin: 5px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #ffcc00;
       color: #000;
     }
-
+    .hidden {
+      display: none;
+    }
     #history {
       max-height: 200px;
       overflow-y: auto;
@@ -122,15 +53,9 @@
       font-size: 10px;
       width: 100%;
     }
-
-    .hidden {
-      display: none;
-    }
-
     .confetti {
       position: fixed;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
       width: 100%;
       height: 100%;
       pointer-events: none;
@@ -139,42 +64,30 @@
   </style>
 </head>
 <body>
-  <div class="top-bar" id="top-usernames">Player 1 vs Player 2</div>
+  <div class="game-container" id="game">
+    <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
+    <h2 id="game-status">🕹️ Get Ready...</h2>
 
-  <div class="game-wrapper">
-    <div class="game-container" id="game">
-      <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
-      <h2 id="game-status">🔹 Get Ready...</h2>
-
-      <div id="play-buttons" class="hidden">
-        <p>🎯 Choose your number:</p>
-        <div>
-          <button onclick="playNum(0)">0</button>
-          <button onclick="playNum(1)">1</button>
-          <button onclick="playNum(2)">2</button>
-          <button onclick="playNum(3)">3</button>
-          <button onclick="playNum(4)">4</button>
-          <button onclick="playNum(5)">5</button>
-        </div>
-      </div>
-
+    <div id="play-buttons" class="hidden">
+      <p>🎯 Choose your number:</p>
       <div>
-        <h3>📜 Scoreboard</h3>
-        <ul id="history" style="list-style:none; padding-left:0;"></ul>
-      </div>
-
-      <button id="reset-btn" class="hidden">⟲ Reset</button>
-      <div class="confetti" id="confetti"></div>
-    </div>
-
-    <div class="chat-box">
-      <h3>💬 Chat</h3>
-      <div id="chat-messages"></div>
-      <div id="chat-input">
-        <input type="text" id="chatText" placeholder="Type your message..." />
-        <button onclick="sendMessage()">Send</button>
+        <button onclick="playNum(0)">0</button>
+        <button onclick="playNum(1)">1</button>
+        <button onclick="playNum(2)">2</button>
+        <button onclick="playNum(3)">3</button>
+        <button onclick="playNum(4)">4</button>
+        <button onclick="playNum(5)">5</button>
       </div>
     </div>
+
+    <div>
+      <h3>📜 Scoreboard</h3>
+      <ul id="history" style="list-style:none; padding-left:0;"></ul>
+    </div>
+
+    <button id="reset-btn" class="hidden">⟲ Reset</button>
+    <button id="reset-btn" class="">⟲ Reset</button>
+    <div class="confetti" id="confetti"></div>
   </div>
 
   <script>
@@ -182,6 +95,7 @@
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
     const username = params.get('username') || 'Player';
+    const username = params.get('username');
     const isHost = params.get('host') === 'true';
 
     let sid = "", innings = 1;
@@ -194,8 +108,6 @@
     const playButtons = document.getElementById("play-buttons");
     const historyList = document.getElementById("history");
     const resetBtn = document.getElementById("reset-btn");
-    const confettiEl = document.getElementById("confetti");
-    const chatMessages = document.getElementById("chat-messages");
 
     socket.on('connect', () => {
       sid = socket.id;
@@ -207,18 +119,11 @@
       document.getElementById("game").style.display = "flex";
       isMyTurnToBat = data.bat_first_sid === sid;
       innings = 1;
-      myScore = 0;
-      opponentScore = 0;
+      myScore = opponentScore = 0;
       target = null;
       gameEnded = false;
       historyList.innerHTML = "";
       resetBtn.classList.add("hidden");
-
-      const opponentId = Object.keys(usernames).find(id => id !== sid);
-      const myName = usernames[sid] || 'You';
-      const oppName = usernames[opponentId] || 'Opponent';
-      document.getElementById("top-usernames").innerText = `${myName} vs ${oppName}`;
-
       updateGameStatus();
       playButtons.classList.remove("hidden");
     });
@@ -259,11 +164,12 @@
           showHistory(`🎯 Target is ${target}`);
           updateGameStatus();
         } else {
-          endGame(!isMyTurnToBat);
+          endGame(!isMyTurnToBat); // Opponent bowled you out
         }
         return;
       }
 
+      // Show score
       showHistory(`${myName}: ${myMove} | ${oppName}: ${opponentMove}`);
       if (isMyTurnToBat) {
         myScore += myMove;
@@ -282,47 +188,52 @@
       endGame(youWon);
     });
 
-    function endGame(won) {
-      gameEnded = true;
-      gameStatus.innerText = won ? "🎉 You Won! 🏆" : "😢 You Lost!";
-      playButtons.classList.add("hidden");
-      resetBtn.classList.remove("hidden");
-      if (won) showConfetti();
-    }
-
-    function showConfetti() {
-      const duration = 2000;
-      const end = Date.now() + duration;
-      const interval = setInterval(() => {
-        if (Date.now() > end) return clearInterval(interval);
-        confetti({ particleCount: 50, spread: 360, origin: { x: Math.random(), y: Math.random() } });
-      }, 200);
-    }
-
     function showHistory(text) {
       const li = document.createElement("li");
       li.textContent = text;
       historyList.appendChild(li);
     }
 
-    function sendMessage() {
-      const input = document.getElementById("chatText");
-      const message = input.value.trim();
-      if (!message) return;
-      socket.emit("send_message", { room, username, message });
-      input.value = "";
+    function showConfetti() {
+  for (let i = 0; i < 1000; i++) {
+    const div = document.createElement("div");
+    div.classList.add("confetti-piece");
+    div.style.left = Math.random() * 100 + "%";
+    div.style.setProperty("--hue", Math.random());
+    div.style.setProperty("--duration", `${2 + Math.random() * 2.5}s`);
+    div.style.setProperty("--x-move", `${(Math.random() - 0.5) * 300}px`);
+    confetti.appendChild(div);
+    setTimeout(() => div.remove(), 5000);
+  }
+    function endGame(won) {
+      gameEnded = true;
+      gameStatus.innerText = won ? "🎉 You Won! 🏆" : "😢 You Lost!";
+      playButtons.classList.add("hidden");
+      resetBtn.classList.remove("hidden");
+      if (won) {
+        showConfetti()
+      }
     }
-
-    socket.on("receive_message", data => {
-      const p = document.createElement("p");
-      p.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
-      chatMessages.appendChild(p);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
 
     resetBtn.onclick = () => {
       socket.emit("restart_game", { room });
     };
+
+  function showConfetti() {
+  for (let i = 0; i < 1000; i++) {
+    const div = document.createElement("div");
+    div.classList.add("confetti-piece");
+    div.style.left = Math.random() * 100 + "%";
+    div.style.setProperty("--hue", Math.random());
+    div.style.setProperty("--duration", `${2 + Math.random() * 2.5}s`);
+    div.style.setProperty("--x-move", `${(Math.random() - 0.5) * 300}px`);
+    confetti.appendChild(div);
+    setTimeout(() => div.remove(), 5000);
+  }
+  
+}
+
+
   </script>
 </body>
 </html>
