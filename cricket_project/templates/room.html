@@ -70,15 +70,18 @@
   </div>
 
   <script>
-    const socket = io('http://localhost:5000');
+    const socket = io(); // ✅ use current domain for Railway/production
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
-    const isHost = params.get('host') === 'true';
-    let sid = null;
+    const username = localStorage.getItem("username") || "Player";
+    const isHost = !sessionStorage.getItem("joinedOnce");
 
+    let sid = null;
     document.getElementById('room-code').innerText = room;
 
-    socket.emit('join_room', { room, host: isHost });
+    socket.emit('join_room', { room, host: isHost, username });
+
+    sessionStorage.setItem("joinedOnce", "true");
 
     socket.on('connect', () => {
       sid = socket.id;
@@ -86,7 +89,9 @@
 
     socket.on('both_ready', () => {
       document.getElementById('status').innerText = 'Both players joined!';
-      if (isHost) document.getElementById('toss-btns').style.display = 'block';
+      if (isHost) {
+        document.getElementById('toss-btns').style.display = 'block';
+      }
     });
 
     function chooseToss(choice) {
