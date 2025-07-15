@@ -2,403 +2,232 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🎮 Hand Cricket Multiplayer Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+  <title>🏏 Multiplayer Hand Cricket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
+    html, body {
+      margin: 0; padding: 0;
+      height: 100%; background: black;
       font-family: 'Press Start 2P', cursive;
-      background: radial-gradient(circle at center, #000010 0%, #000000 100%);
-      overflow: hidden;
-      color: #00ffcc;
+      color: #00fff7; overflow: hidden;
     }
-   
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 4;
-      pointer-events: none;
-    }
-
-    .grid {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: repeating-linear-gradient(#001111 1px, transparent 2px),
-                  repeating-linear-gradient(to right, #001111 1px, transparent 2px);
-      background-size: 60px 60px;
-      animation: gridmove 60s linear infinite;
-      z-index: 0;
-    }
-
-    @keyframes gridmove {
-      0% { background-position: 0 0; }
-      100% { background-position: 1000px 1000px; }
-    }
-
-    .scanlines, .crt-wave {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 6;
-    }
-
-    .scanlines {
-      background: repeating-linear-gradient(to bottom, rgba(0,255,255,0.015), rgba(0,255,255,0.015) 1px, transparent 1px, transparent 2px);
-      mix-blend-mode: overlay;
-      animation: flicker 2s infinite alternate;
-    }
-
-    @keyframes flicker {
-      0% { filter: brightness(1); }
-      100% { filter: brightness(1.05); }
-    }
-
-    .crt-wave {
-      background: radial-gradient(circle, rgba(0,255,255,0.02) 0%, transparent 70%);
-      animation: wave 3s ease-in-out infinite;
-      mix-blend-mode: screen;
-    }
-
-    @keyframes wave {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.02); }
-    }
-
-    .matrix {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .matrix span {
-      position: absolute;
-      color: #00ffcc;
-      opacity: 0;
-      font-size: 14px;
-      font-weight: bold;
-      animation: fall 5s linear infinite;
-    }
-
-    @keyframes fall {
-      0% { transform: translateY(-100vh); opacity: 0; }
-      20% { opacity: 1; }
-      80% { opacity: 1; }
-      100% { transform: translateY(100vh); opacity: 0; }
-    }
-
-    .stars {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: #00ffcc;
-      border-radius: 50%;
-      animation: twinkle 2s infinite ease-in-out;
-    }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.1; }
-      50% { opacity: 1; }
-    }
-
-    .orb, .cross {
-      position: absolute;
-      z-index: 3;
-      opacity: 0.2;
-      animation: float 8s ease-in-out infinite;
-    }
-
-    .orb {
-      width: 10px;
-      height: 10px;
-      background: radial-gradient(circle, #00ffcc, #002);
-      border-radius: 50%;
-    }
-
-    .cross {
-      font-size: 14px;
-      color: #00ffccaa;
-    }
-
-    @keyframes float {
-      0% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-15px) rotate(180deg); }
-      100% { transform: translateY(0) rotate(360deg); }
-    }
-
-    .top-bar {
-      width: 100%;
-      padding: 10px;
-      background-color: #000000cc;
-      text-align: center;
-      font-size: 12px;
-      border-bottom: 2px solid #00ffcc;
-      z-index: 10;
-      position: relative;
-    }
-
-    .game-wrapper {
+    .wrapper {
       display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 1000px;
-      margin: auto;
-      z-index: 10;
-      position: relative;
+      height: 100%;
     }
-
-    .game-container {
-      flex: 3;
+    .game-box {
+      flex: 2;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
-      margin: 20px;
-      padding: 10px;
-      background-color: #000000cc;
-      box-shadow: 0 0 25px #00ffcc;
-      border: 4px double #00ffcc;
+      background: #000;
+      border-right: 2px solid #00fff7;
     }
-
+    .box-content {
+      background: rgba(0, 0, 0, 0.85);
+      padding: 20px;
+      border: 3px solid #00fff7;
+      box-shadow: 0 0 15px #00fff7;
+      text-align: center;
+      width: 90%;
+      max-width: 460px;
+    }
     .chat-box {
       flex: 1;
       display: flex;
       flex-direction: column;
-      margin: 20px 10px 20px 0;
+      background: #000;
       padding: 10px;
-      background-color: #000000cc;
-      border: 4px double #00ffcc;
-      max-height: 500px;
+      border-left: 2px solid #00fff7;
     }
-
+    .chat-box h3 {
+      margin: 5px 0 10px 0;
+      text-align: center;
+      font-size: 12px;
+      color: #00fff7;
+    }
     #chat-messages {
       flex: 1;
       overflow-y: auto;
+      background: #000000cc;
+      border: 2px solid #00fff7;
+      padding: 10px;
       font-size: 10px;
-      margin-bottom: 10px;
     }
-
     #chat-input {
       display: flex;
+      margin-top: 10px;
     }
-
-    #chat-input input,
-    #chat-input button,
-    button {
-      font-family: 'Press Start 2P', cursive;
-      background-color: #000;
-      color: #00ffcc;
-      border: 2px solid #00ffcc;
+    #chatText {
+      flex: 1;
       padding: 5px;
       font-size: 10px;
+      border: 2px solid #00fff7;
+      background: black;
+      color: #00fff7;
+      font-family: inherit;
     }
-
-    #chat-input input {
-      flex: 1;
-    }
-
-    #chat-input button, button {
+    #chat-input button {
+      padding: 5px 10px;
+      border: 2px solid #00fff7;
+      background: black;
+      color: #00fff7;
       cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #00ffcc;
-      color: #000;
-    }
-
-    #history {
-      max-height: 200px;
-      overflow-y: auto;
-      margin: 10px 0;
+      font-family: inherit;
       font-size: 10px;
-      width: 100%;
     }
-
-    .hidden {
-      display: none;
+    button {
+      margin: 6px; padding: 10px 16px;
+      border: 2px solid #00fff7;
+      background: black; color: #00fff7;
+      cursor: pointer; font-family: inherit;
+      font-size: 12px;
     }
-
-    .confetti {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 999;
+    button:hover {
+      background: #00fff7; color: black;
     }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
+  <div class="wrapper">
+    <!-- Game UI -->
+    <div class="game-box">
+      <div class="box-content">
+        <p id="status">Waiting for opponent...</p>
 
-  <!-- Dynamic Background Layers -->
-  <canvas id="cursorCanvas"></canvas>
-  <div class="grid"></div>
-  <div class="stars" id="stars"></div>
-  <div class="matrix" id="matrix"></div>
-  <div id="shapes"></div>
-  <div class="scanlines"></div>
-  <div class="crt-wave"></div>
+        <div id="toss-box" class="hidden">
+          <p>Choose Head or Tail:</p>
+          <button onclick="sendToss('Head')">Head</button>
+          <button onclick="sendToss('Tail')">Tail</button>
+        </div>
 
-  <!-- Game UI -->
-  <div class="top-bar" id="top-usernames">Player 1 vs Player 2</div>
+        <div id="batbowl-box" class="hidden">
+          <p>You won the toss! Choose:</p>
+          <button onclick="chooseBatBowl('Bat')">Bat</button>
+          <button onclick="chooseBatBowl('Bowl')">Bowl</button>
+        </div>
 
-  <div class="game-wrapper">
-    <div class="game-container" id="game">
-      <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
-      <h2 id="game-status">🕹️ Get Ready...</h2>
-
-      <div id="play-buttons" class="hidden">
-        <p>🎯 Choose your number:</p>
-        <div>
-          <button onclick="playNum(0)">0</button>
-          <button onclick="playNum(1)">1</button>
-          <button onclick="playNum(2)">2</button>
-          <button onclick="playNum(3)">3</button>
-          <button onclick="playNum(4)">4</button>
-          <button onclick="playNum(5)">5</button>
+        <div id="play-buttons" class="hidden">
+          <p id="play-instruction">Choose your number:</p>
+          <div>
+            <button onclick="playNum(1)">1</button>
+            <button onclick="playNum(2)">2</button>
+            <button onclick="playNum(3)">3</button>
+            <button onclick="playNum(4)">4</button>
+            <button onclick="playNum(5)">5</button>
+            <button onclick="playNum(6)">6</button>
+          </div>
         </div>
       </div>
-
-      <div>
-        <h3>📜 Scoreboard</h3>
-        <ul id="history" style="list-style:none; padding-left:0;"></ul>
-      </div>
-
-      <button id="reset-btn" class="hidden">⟲ Reset</button>
-      <div class="confetti" id="confetti"></div>
     </div>
 
+    <!-- Chat UI -->
     <div class="chat-box">
-      <h3>💬 Chat</h3>
+      <h3>💬 Live Chat</h3>
       <div id="chat-messages"></div>
       <div id="chat-input">
-        <input type="text" id="chatText" placeholder="Type your message..." />
+        <input type="text" id="chatText" placeholder="Type message..." />
         <button onclick="sendMessage()">Send</button>
       </div>
     </div>
   </div>
 
-  <!-- Game + Background Scripts -->
   <script>
-    // Matrix Rain
-    const matrix = document.getElementById("matrix");
-    const chars = "░▓█@#$&*<>".split("");
-    for (let i = 0; i < 120; i++) {
-      const span = document.createElement("span");
-      span.innerText = chars[Math.floor(Math.random() * chars.length)];
-      span.style.left = Math.random() * 100 + "vw";
-      span.style.animationDelay = Math.random() * 5 + "s";
-      matrix.appendChild(span);
+    const socket = io('http://localhost:5000'); // update if deployed
+    const room = new URLSearchParams(window.location.search).get('room');
+    const isHost = new URLSearchParams(window.location.search).get('host') === 'true';
+    let mySocketId = "";
+
+    socket.on("connect", () => {
+      mySocketId = socket.id;
+      socket.emit("join_room", { room, host: isHost });
+    });
+
+    socket.on("both_ready", () => {
+      document.getElementById("status").innerText = "Both players connected!";
+      if (isHost) {
+        document.getElementById("toss-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "Choose Head or Tail:";
+      }
+    });
+
+    function sendToss(choice) {
+      socket.emit("toss_choice", { room, choice });
+      document.getElementById("toss-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for toss result...";
     }
 
-    // Stars
-    const stars = document.getElementById("stars");
-    for (let i = 0; i < 80; i++) {
-      const star = document.createElement("div");
-      star.className = "star";
-      star.style.top = Math.random() * 100 + "vh";
-      star.style.left = Math.random() * 100 + "vw";
-      star.style.animationDelay = Math.random() * 3 + "s";
-      stars.appendChild(star);
+    socket.on("toss_result", (data) => {
+      const won = (data.winner === "host" && isHost) || (data.winner === "guest" && !isHost);
+      document.getElementById("status").innerText = `Toss Result: ${data.result}. ${data.winner.toUpperCase()} won.`;
+      if (won) {
+        document.getElementById("batbowl-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "You won the toss! Choose Bat or Bowl";
+      }
+    });
+
+    function chooseBatBowl(choice) {
+      socket.emit("bat_bowl_choice", { room, choice });
+      document.getElementById("batbowl-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for game to start...";
     }
 
-    // Floating Shapes
-    const shapes = document.getElementById("shapes");
-    for (let i = 0; i < 25; i++) {
-      const shape = document.createElement("div");
-      if (Math.random() < 0.5) {
-        shape.className = "orb";
+    socket.on("game_start", (data) => {
+      const batting = data.bat_first_sid === mySocketId;
+      document.getElementById("play-buttons").classList.remove("hidden");
+      document.getElementById("status").innerText = batting ? "You are batting" : "You are bowling";
+    });
+
+    function playNum(n) {
+      socket.emit("player_move", { room, move: n });
+      document.getElementById("play-buttons").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for opponent...";
+    }
+
+    socket.on("round_result", data => {
+      if (data.type === "out") {
+        document.getElementById("status").innerText = `OUT! Both played ${data.num}`;
       } else {
-        shape.className = "cross";
-        shape.innerText = "✖";
+        const otherId = Object.keys(data.moves).find(id => id !== mySocketId);
+        const myMove = data.moves[mySocketId];
+        const opponentMove = data.moves[otherId];
+        document.getElementById("status").innerText = `You: ${myMove} | Opponent: ${opponentMove}`;
       }
-      shape.style.top = Math.random() * 100 + "vh";
-      shape.style.left = Math.random() * 100 + "vw";
-      shape.style.animationDuration = (8 + Math.random() * 8) + "s";
-      shapes.appendChild(shape);
-    }
-
-    // Interactive Cursor Ripples
-    const canvas = document.getElementById('cursorCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-    let ripples = [];
-
-    class Ripple {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.radius = 0;
-        this.opacity = 1;
-      }
-      update() {
-        this.radius += 2;
-        this.opacity -= 0.02;
-      }
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,255,200,${this.opacity})`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-
-    function drawCursor() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
-      ctx.arc(mouse.x, mouse.y, 40, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,255,200,0.4)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ripples.forEach((r, i) => {
-        r.update();
-        r.draw();
-        if (r.opacity <= 0) ripples.splice(i, 1);
-      });
-      requestAnimationFrame(drawCursor);
-    }
-
-    drawCursor();
-
-    window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      document.getElementById("play-buttons").classList.remove("hidden");
     });
 
-    window.addEventListener('mousemove', e => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
+    // CHAT LOGIC
+    const chatInput = document.getElementById("chatText");
+    const chatMessages = document.getElementById("chat-messages");
+
+    function sendMessage() {
+      const msg = chatInput.value.trim();
+      if (msg !== "") {
+        socket.emit("chat", { room, message: msg });
+        appendChatMessage("You", msg);
+        chatInput.value = "";
+      }
+    }
+
+    socket.on("chat", (data) => {
+      const sender = data.sender === mySocketId ? "You" : "Opponent";
+      appendChatMessage(sender, data.message);
     });
 
-    const touchEffect = e => {
-      const x = e.clientX || e.touches[0].clientX;
-      const y = e.clientY || e.touches[0].clientY;
-      ripples.push(new Ripple(x, y));
-    };
+    function appendChatMessage(sender, message) {
+      const msgEl = document.createElement("div");
+      msgEl.innerHTML = `<strong>${sender}:</strong> ${message}`;
+      chatMessages.appendChild(msgEl);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
-    window.addEventListener('click', touchEffect);
-    window.addEventListener('touchstart', touchEffect);
+    chatInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") sendMessage();
+    });
   </script>
-
-  <!-- Game Logic (same as your multiplayer logic, already included above) -->
-
 </body>
 </html>
