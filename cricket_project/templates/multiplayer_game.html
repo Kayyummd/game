@@ -3,20 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <title>🎮 Hand Cricket Multiplayer Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
       font-family: 'Press Start 2P', cursive;
       background: #111;
+      background-image:
+        radial-gradient(#ffcc00 1px, transparent 1px),
+        radial-gradient(#ffcc00 1px, transparent 1px);
+      background-position: 0 0, 10px 10px;
+      background-size: 20px 20px;
       color: #ffcc00;
       margin: 0;
       padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
+      animation: pulse 8s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { background-color: #111; }
+      50% { background-color: #1c1c1c; }
     }
 
     .top-bar {
@@ -44,7 +55,7 @@
       margin: 20px;
       padding: 10px;
       background-color: #000;
-      box-shadow: 0 0 20px #ffcc00;
+      box-shadow: 0 0 25px #ffcc00, 0 0 50px #ffcc00;
       border: 4px double #ffcc00;
     }
 
@@ -69,134 +80,6 @@
     #chat-input {
       display: flex;
     }
-  body {
-    font-family: 'Press Start 2P', cursive;
-    background: #111;
-    background-image:
-      radial-gradient(#ffcc00 1px, transparent 1px),
-      radial-gradient(#ffcc00 1px, transparent 1px);
-    background-position: 0 0, 10px 10px;
-    background-size: 20px 20px;
-    color: #ffcc00;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    animation: pulse 8s infinite ease-in-out;
-  }
-
-  @keyframes pulse {
-    0%, 100% { background-color: #111; }
-    50% { background-color: #1c1c1c; }
-  }
-
-  .top-bar {
-    width: 100%;
-    padding: 10px;
-    background-color: #222;
-    color: #ffcc00;
-    text-align: center;
-    font-size: 12px;
-    border-bottom: 2px solid #ffcc00;
-  }
-
-  .game-wrapper {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    max-width: 1000px;
-  }
-
-  .game-container {
-    flex: 3;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    margin: 20px;
-    padding: 10px;
-    background-color: #000;
-    box-shadow: 0 0 25px #ffcc00, 0 0 50px #ffcc00;
-    border: 4px double #ffcc00;
-  }
-
-  .chat-box {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    margin: 20px 10px 20px 0;
-    padding: 10px;
-    background-color: #000;
-    border: 4px double #ffcc00;
-    max-height: 500px;
-  }
-
-  #chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    font-size: 10px;
-    margin-bottom: 10px;
-  }
-
-  #chat-input {
-    display: flex;
-  }
-
-  #chat-input input {
-    flex: 1;
-    padding: 5px;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 10px;
-    background-color: #222;
-    color: #ffcc00;
-    border: 1px solid #ffcc00;
-  }
-
-  #chat-input button {
-    background-color: #222;
-    color: #ffcc00;
-    border: 1px solid #ffcc00;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 5px;
-  }
-
-  button {
-    background-color: #222;
-    color: #ffcc00;
-    border: 2px solid #ffcc00;
-    padding: 10px 15px;
-    font-size: 12px;
-    margin: 5px;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background-color: #ffcc00;
-    color: #000;
-  }
-
-  #history {
-    max-height: 200px;
-    overflow-y: auto;
-    margin: 10px 0;
-    font-size: 10px;
-    width: 100%;
-  }
-
-  .hidden {
-    display: none;
-  }
-
-  .confetti {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 999;
-  }
-</style>
 
     #chat-input input {
       flex: 1;
@@ -246,7 +129,8 @@
 
     .confetti {
       position: fixed;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       pointer-events: none;
@@ -255,14 +139,12 @@
   </style>
 </head>
 <body>
-
   <div class="top-bar" id="top-usernames">Player 1 vs Player 2</div>
 
   <div class="game-wrapper">
-    <!-- Game Container -->
     <div class="game-container" id="game">
       <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
-      <h2 id="game-status">🕹️ Get Ready...</h2>
+      <h2 id="game-status">🔹 Get Ready...</h2>
 
       <div id="play-buttons" class="hidden">
         <p>🎯 Choose your number:</p>
@@ -285,7 +167,6 @@
       <div class="confetti" id="confetti"></div>
     </div>
 
-    <!-- Chat Box -->
     <div class="chat-box">
       <h3>💬 Chat</h3>
       <div id="chat-messages"></div>
@@ -333,7 +214,6 @@
       historyList.innerHTML = "";
       resetBtn.classList.add("hidden");
 
-      // Show usernames on top
       const opponentId = Object.keys(usernames).find(id => id !== sid);
       const myName = usernames[sid] || 'You';
       const oppName = usernames[opponentId] || 'Opponent';
@@ -411,7 +291,7 @@
     }
 
     function showConfetti() {
-      const duration = 2 * 1000;
+      const duration = 2000;
       const end = Date.now() + duration;
       const interval = setInterval(() => {
         if (Date.now() > end) return clearInterval(interval);
@@ -425,7 +305,6 @@
       historyList.appendChild(li);
     }
 
-    // --- Chat Logic ---
     function sendMessage() {
       const input = document.getElementById("chatText");
       const message = input.value.trim();
