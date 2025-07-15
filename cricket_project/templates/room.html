@@ -70,24 +70,26 @@
   </div>
 
   <script>
-    const socket = io(); // ✅ use current domain for Railway/production
+    const socket = io(); // automatically uses correct domain
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
+    const isHost = params.get('host') === 'true';
     const username = localStorage.getItem("username") || "Player";
-    const isHost = !sessionStorage.getItem("joinedOnce");
 
-    let sid = null;
+    if (!room) {
+      alert("No room code provided.");
+      throw new Error("Missing room code");
+    }
+
     document.getElementById('room-code').innerText = room;
 
-    socket.emit('join_room', { room, host: isHost, username });
-
-    sessionStorage.setItem("joinedOnce", "true");
-
     socket.on('connect', () => {
-      sid = socket.id;
+      console.log("[✓] Connected as", socket.id);
+      socket.emit('join_room', { room, host: isHost, username });
     });
 
-    socket.on('both_ready', () => {
+    socket.on('both_ready', data => {
+      console.log("[✓] Both players joined:", data.usernames);
       document.getElementById('status').innerText = 'Both players joined!';
       if (isHost) {
         document.getElementById('toss-btns').style.display = 'block';
@@ -95,18 +97,21 @@
     });
 
     function chooseToss(choice) {
+      console.log("Choosing toss:", choice);
       socket.emit('toss_choice', { room, choice });
       document.getElementById('toss-btns').style.display = 'none';
       document.getElementById('status').innerText = 'Waiting for toss...';
     }
 
     socket.on('toss_result', data => {
+      console.log("[✓] Toss result:", data);
       document.getElementById('status').innerText = '';
       document.getElementById('toss-result').style.display = 'block';
       document.getElementById('toss-text').innerText =
         `Toss Result: ${data.result} → ${data.winner === 'host' ? 'Host' : 'Guest'} won`;
 
-      if ((isHost && data.winner === 'host') || (!isHost && data.winner === 'guest')) {
+      const youWonToss = (isHost && data.winner === 'host') || (!isHost && data.winner === 'guest');
+      if (youWonToss) {
         document.getElementById('batbowl-btns').style.display = 'block';
       } else {
         document.getElementById('status').innerText = 'Opponent is choosing Bat/Bowl...';
@@ -114,12 +119,14 @@
     });
 
     function chooseBatBowl(choice) {
+      console.log("Choosing:", choice);
       socket.emit('bat_bowl_choice', { room, choice });
       document.getElementById('batbowl-btns').style.display = 'none';
       document.getElementById('status').innerText = 'Starting game...';
     }
 
-    socket.on('game_start', () => {
+    socket.on('game_start', data => {
+      console.log("[✓] Game is starting:", data);
       window.location.href = `multiplayer_game.html?room=${room}`;
     });
   </script>
