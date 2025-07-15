@@ -7,108 +7,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    /* 🎮 Retro Neon Grid Background */
-    body, html {
-      margin: 0; padding: 0; height: 100%;
-      font-family: 'Press Start 2P', monospace;
-      background: radial-gradient(circle at bottom, #000011, #000022);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      height: 100%; background: black; color: #00fff7;
+      font-family: 'Press Start 2P', cursive;
     }
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent, transparent 20px,
-        rgba(0,255,0,0.05) 20px, rgba(0,255,0,0.05) 21px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        transparent, transparent 20px,
-        rgba(0,255,0,0.05) 20px, rgba(0,255,0,0.05) 21px
-      );
-      pointer-events: none;
-    }
-
     .game-box {
-      position: relative;
-      background: rgba(0,0,0,0.9);
-      border: 4px solid #00ff00;
-      padding: 20px;
-      max-width: 700px;
-      width: 90%;
-      box-shadow: 0 0 20px #00ff00, inset 0 0 10px #00ff00;
-      z-index: 1;
-      color: #00ff00;
-      text-align: center;
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85); padding: 30px;
+      border: 3px solid #00fff7;
+      box-shadow: 0 0 20px #00fff7;
+      text-align: center; width: 90%; max-width: 460px;
     }
-
-    .game-box h1 {
-      color: #ff00ff;
-      margin-bottom: 0.5em;
-    }
-
     button {
-      background: #000;
-      color: #00ff00;
-      border: 2px solid #00ff00;
-      margin: 5px;
-      padding: 8px 14px;
-      cursor: pointer;
-      font-family: inherit;
+      margin: 6px; padding: 10px 16px;
+      border: 2px solid #00fff7;
+      background: black; color: #00fff7;
+      cursor: pointer; font-family: inherit;
       font-size: 12px;
     }
     button:hover {
-      background: #00ff00;
-      color: black;
+      background: #00fff7; color: black;
     }
-
+    #bg {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: -1;
+    }
     .hidden { display: none; }
-
-    .scoreboard, .chat-box {
-      background: #001100;
-      border: 2px solid #00ff00;
-      margin-top: 15px;
-      padding: 10px;
-      max-height: 150px;
-      overflow-y: auto;
-      text-align: left;
-      font-size: 10px;
-    }
-
-    .chat-box input {
-      width: 65%;
-      padding: 6px;
-      background: black;
-      color: #00ff00;
-      border: 2px solid #00ff00;
-      font-family: inherit;
-      font-size: 12px;
-    }
-    .chat-box .emoji-btn {
-      padding: 6px;
-      background: #000;
-      color: #00ff00;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .chat-box .emoji-btn:hover {
-      color: #ff00ff;
-    }
-    .chat-messages div {
-      padding: 4px 0;
-    }
   </style>
 </head>
 <body>
+  <canvas id="bg"></canvas>
+
   <div class="game-box">
-    <h1>🏏 Multiplayer Hand Cricket</h1>
     <p id="status">Waiting for opponent...</p>
 
     <div id="toss-box" class="hidden">
@@ -124,123 +56,119 @@
     </div>
 
     <div id="play-buttons" class="hidden">
-      <p>Choose your number (0–5):</p>
+      <p id="play-instruction">Choose your number:</p>
       <div>
-        <button onclick="playNum(0)">0️⃣</button>
-        <button onclick="playNum(1)">1️⃣</button>
-        <button onclick="playNum(2)">2️⃣</button>
-        <button onclick="playNum(3)">3️⃣</button>
-        <button onclick="playNum(4)">4️⃣</button>
-        <button onclick="playNum(5)">5️⃣</button>
+        <button onclick="playNum(1)">1</button>
+        <button onclick="playNum(2)">2</button>
+        <button onclick="playNum(3)">3</button>
+        <button onclick="playNum(4)">4</button>
+        <button onclick="playNum(5)">5</button>
+        <button onclick="playNum(6)">6</button>
       </div>
-    </div>
-
-    <div class="scoreboard">
-      <h3>📜 Scoreboard History</h3>
-      <div id="score-history"></div>
-    </div>
-
-    <div class="chat-box">
-      <div class="chat-messages" id="chat-messages"></div>
-      <input type="text" id="chat-input" placeholder="Type message..." />
-      <button onclick="sendMessage()">Send</button>
-      <button class="emoji-btn" onclick="addEmoji('😂')">😂</button>
-      <button class="emoji-btn" onclick="addEmoji('😎')">😎</button>
-      <button class="emoji-btn" onclick="addEmoji('💥')">💥</button>
-      <button class="emoji-btn" onclick="addEmoji('🔥')">🔥</button>
     </div>
   </div>
 
   <script>
-    const socket = io();
-    const params = new URLSearchParams(window.location.search);
-    const room = params.get('room');
-    const isHost = params.get('host') === 'true';
-    let myId;
+    // --- Background Animation ---
+    const bg = document.getElementById('bg');
+    const ctx = bg.getContext('2d');
+    let stars = [];
 
-    socket.on('connect', () => {
-      myId = socket.id;
-      socket.emit('join_room', { room, host: isHost });
+    function resize() {
+      bg.width = window.innerWidth;
+      bg.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize); resize();
+
+    for (let i = 0; i < 100; i++) {
+      stars.push({
+        x: Math.random() * bg.width,
+        y: Math.random() * bg.height / 2,
+        r: Math.random() * 1.5 + 0.5,
+        d: Math.random() * 0.3 + 0.1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, bg.width, bg.height);
+      stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, 2 * Math.PI);
+        ctx.fillStyle = "#00fff7";
+        ctx.fill();
+        s.y += s.d;
+        if (s.y > bg.height / 2) {
+          s.y = 0;
+          s.x = Math.random() * bg.width;
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- Multiplayer Game Logic ---
+    const socket = io('http://localhost:5000'); // Update if deployed elsewhere
+    const room = new URLSearchParams(window.location.search).get('room');
+    const isHost = new URLSearchParams(window.location.search).get('host') === 'true';
+    let mySocketId = "";
+
+    socket.on("connect", () => {
+      mySocketId = socket.id;
+      socket.emit("join_room", { room, host: isHost });
     });
 
-    socket.on('both_ready', () => {
-      document.getElementById('status').innerText = 'Players connected!';
+    socket.on("both_ready", () => {
+      document.getElementById("status").innerText = "Both players connected!";
       if (isHost) {
-        document.getElementById('toss-box').classList.remove('hidden');
+        document.getElementById("toss-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "Choose Head or Tail:";
       }
     });
 
     function sendToss(choice) {
-      socket.emit('toss_choice', { room, choice });
-      document.getElementById('toss-box').classList.add('hidden');
-      document.getElementById('status').innerText = 'Tossing…';
+      socket.emit("toss_choice", { room, choice });
+      document.getElementById("toss-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for toss result...";
     }
 
-    socket.on('toss_result', data => {
-      const won = (data.winner === 'host' && isHost)
-               || (data.winner === 'guest' && !isHost);
-      document.getElementById('status').innerText =
-        `Toss: ${data.result} → ${data.winner.toUpperCase()} wins`;
+    socket.on("toss_result", (data) => {
+      const won = (data.winner === "host" && isHost) || (data.winner === "guest" && !isHost);
+      document.getElementById("status").innerText = Toss Result: ${data.result}. ${data.winner.toUpperCase()} won.;
 
       if (won) {
-        document.getElementById('batbowl-box').classList.remove('hidden');
+        document.getElementById("batbowl-box").classList.remove("hidden");
+        document.getElementById("status").innerText = "You won the toss! Choose Bat or Bowl";
       }
     });
 
-    function chooseBatBowl(c) {
-      socket.emit('bat_bowl_choice', { room, choice: c });
-      document.getElementById('batbowl-box').classList.add('hidden');
-      document.getElementById('status').innerText = 'Getting game ready...';
+    function chooseBatBowl(choice) {
+      socket.emit("bat_bowl_choice", { room, choice });
+      document.getElementById("batbowl-box").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for game to start...";
     }
 
-    socket.on('game_start', data => {
-      const batFirst = (data.bat_first_sid === myId);
-      document.getElementById('play-buttons').classList.remove('hidden');
-      document.getElementById('status').innerText = batFirst
-        ? 'You are batting!'
-        : 'You are bowling!';
+    socket.on("game_start", (data) => {
+      const batting = data.bat_first_sid === mySocketId;
+      document.getElementById("play-buttons").classList.remove("hidden");
+      document.getElementById("status").innerText = batting ? "You are batting" : "You are bowling";
     });
 
     function playNum(n) {
-      socket.emit('player_move', { room, move: n });
-      document.getElementById('play-buttons').classList.add('hidden');
-      document.getElementById('status').innerText = 'Waiting for opponent...' ;
+      socket.emit("player_move", { room, move: n });
+      document.getElementById("play-buttons").classList.add("hidden");
+      document.getElementById("status").innerText = "Waiting for opponent...";
     }
 
-    socket.on('round_result', data => {
-      const hist = document.getElementById('score-history');
-      const otherId = Object.keys(data.moves).find(id => id !== myId);
-      const myMove = data.moves[myId];
-      const opp = data.type === 'out'
-        ? `💀 OUT both: ${data.num}`
-        : `You:${myMove} vs Opponent:${data.moves[otherId]}`;
-      const item = document.createElement('div');
-      item.textContent = opp;
-      hist.appendChild(item);
-      document.getElementById('status').innerText = opp;
-      document.getElementById('play-buttons').classList.remove('hidden');
-    });
-
-    // --- Chat & Emojis ---
-    function sendMessage() {
-      const input = document.getElementById('chat-input');
-      const msg = input.value.trim();
-      if (!msg) return;
-      socket.emit('chat', { room, message: msg });
-      input.value = '';
-    }
-
-    function addEmoji(e) {
-      const input = document.getElementById('chat-input');
-      input.value += e;
-      input.focus();
-    }
-
-    socket.on('chat', data => {
-      const div = document.createElement('div');
-      const who = data.sender === myId ? 'You' : 'Opponent';
-      div.textContent = `${who}: ${data.message}`;
-      document.getElementById('chat-messages').appendChild(div);
+    socket.on("round_result", data => {
+      if (data.type === "out") {
+        document.getElementById("status").innerText = OUT! Both played ${data.num};
+      } else {
+        const otherId = Object.keys(data.moves).find(id => id !== mySocketId);
+        const myMove = data.moves[mySocketId];
+        const opponentMove = data.moves[otherId];
+        document.getElementById("status").innerText = You: ${myMove} | Opponent: ${opponentMove};
+      }
+      document.getElementById("play-buttons").classList.remove("hidden");
     });
   </script>
 </body>
