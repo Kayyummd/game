@@ -2,152 +2,297 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🏏 Hand Cricket Multiplayer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <title>🎮 Hand Cricket Multiplayer Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    body, html {
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background: #111;
+      color: #ffcc00;
       margin: 0;
       padding: 0;
-      height: 100%;
-      font-family: 'Press Start 2P', monospace;
-      background: #000;
-      color: #00ffcc;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
     }
-    .game-box {
-      width: 90%;
-      max-width: 650px;
-      background: #000;
-      border: 4px solid #00ffcc;
-      padding: 20px;
-      box-shadow: 0 0 20px #00ffcc;
-    }
-    h1 { color: #ff0066; font-size: 1em; }
-    p#status { font-size: 0.8em; margin: 10px 0; }
 
-    button {
-      background: #000;
-      color: #00ffcc;
-      border: 2px solid #00ffcc;
-      padding: 6px 12px;
-      margin: 4px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #00ffcc;
-      color: #000;
-    }
-
-    .hidden { display: none; }
-
-    .scoreboard {
-      border: 2px solid #00ffcc;
+    .top-bar {
+      width: 100%;
       padding: 10px;
-      margin: 10px 0;
-      background: #001010;
+      background-color: #222;
+      color: #ffcc00;
+      text-align: center;
+      font-size: 12px;
+      border-bottom: 2px solid #ffcc00;
     }
 
-    .score-line {
+    .game-wrapper {
       display: flex;
       justify-content: space-between;
-      font-size: 0.7em;
+      width: 100%;
+      max-width: 1000px;
     }
 
-    .history {
-      font-size: 0.65em;
-      margin-top: 10px;
-      max-height: 100px;
-      overflow-y: auto;
+    .game-container {
+      flex: 3;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px;
+      padding: 10px;
+      background-color: #000;
+      box-shadow: 0 0 20px #ffcc00;
+      border: 4px double #ffcc00;
     }
 
     .chat-box {
-      border: 2px solid #00ffcc;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin: 20px 10px 20px 0;
       padding: 10px;
-      background: #001010;
-      margin-top: 10px;
-      font-size: 0.65em;
+      background-color: #000;
+      border: 4px double #ffcc00;
+      max-height: 500px;
     }
 
-    .chat-box input {
-      width: 65%;
-      padding: 4px;
-      font-size: 0.7em;
-      background: #000;
-      color: #00ffcc;
-      border: 2px solid #00ffcc;
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 10px;
+      margin-bottom: 10px;
     }
 
-    .emoji-btn {
-      background: transparent;
-      color: #00ffcc;
-      border: none;
-      font-size: 1.1em;
+    #chat-input {
+      display: flex;
+    }
+  body {
+    font-family: 'Press Start 2P', cursive;
+    background: #111;
+    background-image:
+      radial-gradient(#ffcc00 1px, transparent 1px),
+      radial-gradient(#ffcc00 1px, transparent 1px);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+    color: #ffcc00;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: pulse 8s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { background-color: #111; }
+    50% { background-color: #1c1c1c; }
+  }
+
+  .top-bar {
+    width: 100%;
+    padding: 10px;
+    background-color: #222;
+    color: #ffcc00;
+    text-align: center;
+    font-size: 12px;
+    border-bottom: 2px solid #ffcc00;
+  }
+
+  .game-wrapper {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .game-container {
+    flex: 3;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px;
+    padding: 10px;
+    background-color: #000;
+    box-shadow: 0 0 25px #ffcc00, 0 0 50px #ffcc00;
+    border: 4px double #ffcc00;
+  }
+
+  .chat-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 20px 10px 20px 0;
+    padding: 10px;
+    background-color: #000;
+    border: 4px double #ffcc00;
+    max-height: 500px;
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 10px;
+    margin-bottom: 10px;
+  }
+
+  #chat-input {
+    display: flex;
+  }
+
+  #chat-input input {
+    flex: 1;
+    padding: 5px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    background-color: #222;
+    color: #ffcc00;
+    border: 1px solid #ffcc00;
+  }
+
+  #chat-input button {
+    background-color: #222;
+    color: #ffcc00;
+    border: 1px solid #ffcc00;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 5px;
+  }
+
+  button {
+    background-color: #222;
+    color: #ffcc00;
+    border: 2px solid #ffcc00;
+    padding: 10px 15px;
+    font-size: 12px;
+    margin: 5px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #ffcc00;
+    color: #000;
+  }
+
+  #history {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 10px 0;
+    font-size: 10px;
+    width: 100%;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .confetti {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+
+    #chat-input input {
+      flex: 1;
+      padding: 5px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      background-color: #222;
+      color: #ffcc00;
+      border: 1px solid #ffcc00;
+    }
+
+    #chat-input button {
+      background-color: #222;
+      color: #ffcc00;
+      border: 1px solid #ffcc00;
+      font-size: 10px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    button {
+      background-color: #222;
+      color: #ffcc00;
+      border: 2px solid #ffcc00;
+      padding: 10px 15px;
+      font-size: 12px;
+      margin: 5px;
       cursor: pointer;
     }
 
-    .confetti-piece {
-      position: fixed;
-      width: 8px;
-      height: 8px;
-      background: hsl(calc(360 * var(--hue)), 100%, 50%);
-      pointer-events: none;
-      animation: fall var(--duration) linear forwards;
-      border-radius: 50%;
+    button:hover {
+      background-color: #ffcc00;
+      color: #000;
     }
 
-    @keyframes fall {
-      0% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    #history {
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 10px 0;
+      font-size: 10px;
+      width: 100%;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .confetti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
-  <div class="game-box">
-    <h1>🏏 Multiplayer Hand Cricket</h1>
-    <p id="status">Waiting for opponent...</p>
 
-    <div class="scoreboard">
-      <div class="score-line"><span id="player1-name">Player 1</span><span id="player1-score">0</span></div>
-      <div class="score-line"><span id="player2-name">Player 2</span><span id="player2-score">0</span></div>
+  <div class="top-bar" id="top-usernames">Player 1 vs Player 2</div>
+
+  <div class="game-wrapper">
+    <!-- Game Container -->
+    <div class="game-container" id="game">
+      <h3 id="target-display" style="margin:10px; display:none;">🎯 Target: --</h3>
+      <h2 id="game-status">🕹️ Get Ready...</h2>
+
+      <div id="play-buttons" class="hidden">
+        <p>🎯 Choose your number:</p>
+        <div>
+          <button onclick="playNum(0)">0</button>
+          <button onclick="playNum(1)">1</button>
+          <button onclick="playNum(2)">2</button>
+          <button onclick="playNum(3)">3</button>
+          <button onclick="playNum(4)">4</button>
+          <button onclick="playNum(5)">5</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>📜 Scoreboard</h3>
+        <ul id="history" style="list-style:none; padding-left:0;"></ul>
+      </div>
+
+      <button id="reset-btn" class="hidden">⟲ Reset</button>
+      <div class="confetti" id="confetti"></div>
     </div>
 
-    <div id="toss-box" class="hidden">
-      <p>Choose Head or Tail:</p>
-      <button onclick="sendToss('Head')">Head</button>
-      <button onclick="sendToss('Tail')">Tail</button>
-    </div>
-
-    <div id="batbowl-box" class="hidden">
-      <p>You won the toss! Choose:</p>
-      <button onclick="chooseBatBowl('Bat')">Bat</button>
-      <button onclick="chooseBatBowl('Bowl')">Bowl</button>
-    </div>
-
-    <div id="play-buttons" class="hidden">
-      <p id="btn-instruction">Choose number:</p>
-      <button onclick="playNum(0)">0</button>
-      <button onclick="playNum(1)">1</button>
-      <button onclick="playNum(2)">2</button>
-      <button onclick="playNum(3)">3</button>
-      <button onclick="playNum(4)">4</button>
-      <button onclick="playNum(5)">5</button>
-    </div>
-
-    <div class="history" id="score-history"></div>
-
+    <!-- Chat Box -->
     <div class="chat-box">
+      <h3>💬 Chat</h3>
       <div id="chat-messages"></div>
-      <input type="text" id="chat-input" placeholder="Type..." />
-      <button onclick="sendMessage()">Send</button>
-      <button class="emoji-btn" onclick="addEmoji('😂')">😂</button>
-      <button class="emoji-btn" onclick="addEmoji('😎')">😎</button>
-      <button class="emoji-btn" onclick="addEmoji('💥')">💥</button>
-      <button class="emoji-btn" onclick="addEmoji('🔥')">🔥</button>
+      <div id="chat-input">
+        <input type="text" id="chatText" placeholder="Type your message..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
     </div>
   </div>
 
@@ -155,142 +300,150 @@
     const socket = io();
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
+    const username = params.get('username') || 'Player';
     const isHost = params.get('host') === 'true';
-    let myId, battingSid, innings = 1, scores = { me: 0, opp: 0 };
+
+    let sid = "", innings = 1;
+    let myScore = 0, opponentScore = 0;
+    let isMyTurnToBat = false, target = null, gameEnded = false;
+    let usernames = {};
+
+    const targetDisplay = document.getElementById("target-display");
+    const gameStatus = document.getElementById("game-status");
+    const playButtons = document.getElementById("play-buttons");
+    const historyList = document.getElementById("history");
+    const resetBtn = document.getElementById("reset-btn");
+    const confettiEl = document.getElementById("confetti");
+    const chatMessages = document.getElementById("chat-messages");
 
     socket.on('connect', () => {
-      myId = socket.id;
-      socket.emit('join_room', { room, host: isHost });
+      sid = socket.id;
+      socket.emit('join_room', { room, host: isHost, username });
     });
 
-    socket.on('usernames', ({ p1, p2 }) => {
-      document.getElementById('player1-name').innerText = p1;
-      document.getElementById('player2-name').innerText = p2;
+    socket.on("game_start", data => {
+      usernames = data.usernames;
+      document.getElementById("game").style.display = "flex";
+      isMyTurnToBat = data.bat_first_sid === sid;
+      innings = 1;
+      myScore = 0;
+      opponentScore = 0;
+      target = null;
+      gameEnded = false;
+      historyList.innerHTML = "";
+      resetBtn.classList.add("hidden");
+
+      // Show usernames on top
+      const opponentId = Object.keys(usernames).find(id => id !== sid);
+      const myName = usernames[sid] || 'You';
+      const oppName = usernames[opponentId] || 'Opponent';
+      document.getElementById("top-usernames").innerText = `${myName} vs ${oppName}`;
+
+      updateGameStatus();
+      playButtons.classList.remove("hidden");
     });
 
-    socket.on('both_ready', () => {
-      setStatus('Players connected!');
-      if (isHost) show('toss-box');
-    });
-
-    function sendToss(choice) {
-      socket.emit('toss_choice', { room, choice });
-      hide('toss-box'); setStatus('Tossing...');
-    }
-
-    socket.on('toss_result', data => {
-      const won = data.winner === 'host' ? isHost : !isHost;
-      setStatus(`Toss: ${data.result} → ${data.winner} wins`);
-      if (won) show('batbowl-box');
-    });
-
-    function chooseBatBowl(choice) {
-      socket.emit('bat_bowl_choice', { room, choice });
-      hide('batbowl-box'); setStatus('Game starting…');
-    }
-
-    socket.on('game_start', data => {
-      battingSid = data.bat_first_sid;
-      nextTurn();
-    });
-
-    function nextTurn() {
-      const batting = (battingSid === myId);
-      setStatus(batting ? 'You bat!' : 'You bowl!');
-      show('play-buttons');
-      setInstruction(batting ? `Batting (Innings ${innings})` : `Bowling (Innings ${innings})`);
+    function updateGameStatus() {
+      if (innings === 1) {
+        gameStatus.innerText = isMyTurnToBat ? "🏏 You are Batting!" : "🥎 You are Bowling!";
+        targetDisplay.style.display = "none";
+      } else {
+        targetDisplay.style.display = "block";
+        targetDisplay.innerText = `🎯 Target: ${target}`;
+        gameStatus.innerText = isMyTurnToBat
+          ? `🏏 Batting – Target: ${target}`
+          : `🥎 Bowling – Defend ${target}`;
+      }
     }
 
     function playNum(n) {
-      socket.emit('player_move', { room, move: n });
-      hide('play-buttons');
-      setStatus('Waiting for opponent...');
+      if (gameEnded) return;
+      socket.emit("player_move", { room, move: n });
+      playButtons.classList.add("hidden");
+      gameStatus.innerText = "⏳ Waiting for opponent...";
     }
 
-    socket.on('round_result', data => {
-      const myMove = data.moves[myId];
-      const otherId = Object.keys(data.moves).find(i => i !== myId);
-      const oppMove = data.moves[otherId];
-      let outcome = '';
-      if (data.type === 'out') {
-        outcome = `💀 OUT! Both chose: ${data.num}`;
-        nextInningsOrEnd();
-      } else {
-        outcome = `You: ${myMove} | Opponent: ${oppMove}`;
-        updateScore(myMove > oppMove ? 'me' : 'opp');
-        nextTurn();
+    socket.on("round_result", data => {
+      const myMove = data.moves[sid];
+      const opponentSid = Object.keys(data.moves).find(id => id !== sid);
+      const opponentMove = data.moves[opponentSid];
+      const myName = usernames[sid] || 'You';
+      const oppName = usernames[opponentSid] || 'Opponent';
+
+      if (data.type === "out") {
+        showHistory(`💥 OUT! ${myName} & ${oppName} both played ${myMove}`);
+        if (innings === 1) {
+          target = isMyTurnToBat ? myScore + 1 : opponentScore + 1;
+          innings = 2;
+          isMyTurnToBat = !isMyTurnToBat;
+          showHistory(`🎯 Target is ${target}`);
+          updateGameStatus();
+        } else {
+          endGame(!isMyTurnToBat);
+        }
+        return;
       }
-      addHistory(outcome);
+
+      showHistory(`${myName}: ${myMove} | ${oppName}: ${opponentMove}`);
+      if (isMyTurnToBat) {
+        myScore += myMove;
+        if (innings === 2 && myScore >= target) return endGame(true);
+      } else {
+        opponentScore += opponentMove;
+        if (innings === 2 && opponentScore >= target) return endGame(false);
+      }
+
+      playButtons.classList.remove("hidden");
+      updateGameStatus();
     });
 
-    function nextInningsOrEnd() {
-      if (innings === 2) {
-        endGame();
-      } else {
-        innings++;
-        battingSid = battingSid === myId ? Object.keys(scores).find(k => k !== myId) : myId;
-        setTimeout(nextTurn, 1000);
-      }
+    socket.on("game_over", data => {
+      const youWon = data.winner_sid === sid;
+      endGame(youWon);
+    });
+
+    function endGame(won) {
+      gameEnded = true;
+      gameStatus.innerText = won ? "🎉 You Won! 🏆" : "😢 You Lost!";
+      playButtons.classList.add("hidden");
+      resetBtn.classList.remove("hidden");
+      if (won) showConfetti();
     }
 
-    function updateScore(who) {
-      scores[who]++;
-      document.getElementById('player1-score').innerText = isHost && who === 'me' || !isHost && who === 'opp' ? scores[who] : scores[Object.keys(scores).find(k => k !== who)];
-      document.getElementById('player2-score').innerText = isHost && who === 'opp' || !isHost && who === 'me' ? scores[who] : scores[Object.keys(scores).find(k => k !== who)];
+    function showConfetti() {
+      const duration = 2 * 1000;
+      const end = Date.now() + duration;
+      const interval = setInterval(() => {
+        if (Date.now() > end) return clearInterval(interval);
+        confetti({ particleCount: 50, spread: 360, origin: { x: Math.random(), y: Math.random() } });
+      }, 200);
     }
 
-    function endGame() {
-      const winner = scores.me > scores.opp ? '🎉 YOU WIN!' : '😢 YOU LOSE!';
-      setStatus(winner);
-      startConfetti();
+    function showHistory(text) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      historyList.appendChild(li);
     }
 
-    function startConfetti() {
-      for (let i = 0; i < 150; i++) {
-        const d = document.createElement('div');
-        d.className = 'confetti-piece';
-        d.style.setProperty('--hue', Math.random());
-        d.style.setProperty('--duration', `${2 + Math.random() * 3}s`);
-        d.style.left = `${Math.random() * 100}%`;
-        document.body.appendChild(d);
-        setTimeout(() => d.remove(), 5000);
-      }
-    }
-
-    // Chat
+    // --- Chat Logic ---
     function sendMessage() {
-      const inp = document.getElementById('chat-input');
-      const msg = inp.value.trim();
-      if (!msg) return;
-      socket.emit('chat', { room, message: msg });
-      inp.value = '';
+      const input = document.getElementById("chatText");
+      const message = input.value.trim();
+      if (!message) return;
+      socket.emit("send_message", { room, username, message });
+      input.value = "";
     }
 
-    function addEmoji(e) {
-      const inp = document.getElementById('chat-input');
-      inp.value += e;
-      inp.focus();
-    }
-
-    socket.on('chat', data => {
-      const who = data.sender === myId ? 'You' : 'Opponent';
-      const div = document.createElement('div');
-      div.textContent = `${who}: ${data.message}`;
-      const cm = document.getElementById('chat-messages');
-      cm.appendChild(div);
-      cm.scrollTop = cm.scrollHeight;
+    socket.on("receive_message", data => {
+      const p = document.createElement("p");
+      p.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+      chatMessages.appendChild(p);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    // Utils
-    function setStatus(txt) { document.getElementById('status').innerText = txt; }
-    function show(id) { document.getElementById(id).classList.remove('hidden'); }
-    function hide(id) { document.getElementById(id).classList.add('hidden'); }
-    function setInstruction(txt) { document.getElementById('btn-instruction').innerText = txt; }
-    function addHistory(txt) {
-      const hist = document.getElementById('score-history');
-      hist.innerHTML += `<div>${txt}</div>`;
-      hist.scrollTop = hist.scrollHeight;
-    }
+    resetBtn.onclick = () => {
+      socket.emit("restart_game", { room });
+    };
   </script>
 </body>
 </html>
