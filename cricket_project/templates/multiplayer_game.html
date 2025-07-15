@@ -1,3 +1,4 @@
+<!-- ✅ Final version: Multiplayer Hand Cricket Game with Full Logic, Confetti, Chat, Emojis, Retro UI -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    /* Neon grid background */
     body, html {
       margin: 0; padding: 0; height: 100%;
       font-family: 'Press Start 2P', monospace;
@@ -16,16 +16,18 @@
       display: flex; justify-content: center; align-items: center;
     }
     body::before {
-      content: ""; position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background:
         linear-gradient(#00ff00 1px, transparent 1px) 0 0 / 20px 20px,
         linear-gradient(90deg, #00ff00 1px, transparent 1px) 0 0 / 20px 20px;
       opacity: 0.1;
       pointer-events: none;
     }
+
     .game-box {
-      position: relative;
       background: #000;
       border: 4px solid #00ff00;
       padding: 20px;
@@ -34,8 +36,10 @@
       z-index: 1;
       color: #00ff00;
     }
+
     h1 { color: #ff0066; font-size: 1.2em; margin: 0 0 10px; }
     p#status { margin: 10px 0; font-size: 0.85em; }
+
     button {
       background: #000; color: #00ff00;
       border: 2px solid #00ff00;
@@ -43,6 +47,7 @@
       cursor: pointer; font-size: 12px;
     }
     button:hover { background: #00ff00; color: #000; }
+
     .hidden { display: none; }
 
     .scoreboard, .chat-box {
@@ -54,6 +59,7 @@
       overflow-y: auto;
       font-size: 0.75em;
     }
+
     .chat-box input {
       width: 70%;
       padding: 4px;
@@ -62,6 +68,7 @@
       color: #00ff00;
       border: 2px solid #00ff00;
     }
+
     .emoji-btn {
       border: none;
       background: transparent;
@@ -70,9 +77,7 @@
       cursor: pointer;
       margin-left: 4px;
     }
-    .emoji-btn:hover {
-      color: #ff0066;
-    }
+    .emoji-btn:hover { color: #ff0066; }
 
     /* Confetti pieces */
     .confetti-piece {
@@ -82,7 +87,9 @@
       pointer-events: none;
       animation: fall var(--duration) linear forwards;
       border-radius: 50%;
+      z-index: 1000;
     }
+
     @keyframes fall {
       0% { transform: translateY(0) rotate(0); opacity:1; }
       100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
@@ -109,12 +116,12 @@
     <div id="play-buttons" class="hidden">
       <p id="btn-instruction">Pick (0–5):</p>
       <div id="num-buttons">
-        <button onclick="playNum(0)">0️⃣ 0</button>
-        <button onclick="playNum(1)">1️⃣ 1</button>
-        <button onclick="playNum(2)">2️⃣ 2</button>
-        <button onclick="playNum(3)">3️⃣ 3</button>
-        <button onclick="playNum(4)">4️⃣ 4</button>
-        <button onclick="playNum(5)">5️⃣ 5</button>
+        <button onclick="playNum(0)">0️⃣</button>
+        <button onclick="playNum(1)">1️⃣</button>
+        <button onclick="playNum(2)">2️⃣</button>
+        <button onclick="playNum(3)">3️⃣</button>
+        <button onclick="playNum(4)">4️⃣</button>
+        <button onclick="playNum(5)">5️⃣</button>
       </div>
     </div>
 
@@ -157,8 +164,7 @@
     }
 
     socket.on('toss_result', data => {
-      const won = data.winner==='host'
-        ? isHost : !isHost;
+      const won = data.winner==='host' ? isHost : !isHost;
       setStatus(`Toss: ${data.result} → ${data.winner} wins`);
       if (won) show('batbowl-box');
     });
@@ -178,7 +184,7 @@
       const batting = (battingSid === myId);
       setStatus(batting ? 'You bat!' : 'You bowl!');
       show('play-buttons');
-      setInstruction(batting ? `Batting (innings ${innings})` : `Bowling (innings ${innings})`);
+      setInstruction(batting ? `Batting (Innings ${innings})` : `Bowling (Innings ${innings})`);
     }
 
     function playNum(n) {
@@ -189,60 +195,28 @@
 
     socket.on('round_result', data => {
       const myMove = data.moves[myId];
-      const other = Object.keys(data.moves).find(i => i !== myId);
-      const oppMove = data.moves[other];
-      let outcome = '';
-      if (data.type === 'out') {
-        outcome = `💀 OUT! Both: ${data.num}`;
-        addScore(myMove > oppMove ? 'me' : 'opp');
-        if (innings === 2) return endGame();
+      const otherId = Object.keys(data.moves).find(id => id !== myId);
+      const oppMove = data.moves[otherId];
+      let outcome;
+
+      if (myMove === oppMove) {
+        outcome = `💀 OUT! Both: ${myMove}`;
+        battingSid = (battingSid === myId ? otherId : myId);
         innings++;
-        battingSid = (battingSid === myId ? other : myId);
-        setTimeout(nextTurn, 1000);
+        if (innings > 2) return endGame();
       } else {
+        const isBatting = (battingSid === myId);
+        if (isBatting) scores.me += myMove;
+        else scores.opp += oppMove;
         outcome = `You: ${myMove} vs Opponent: ${oppMove}`;
-        addScore(myMove > oppMove ? 'me' : 'opp');
-        nextTurn();
       }
+
       addHistory(outcome);
+      setTimeout(nextTurn, 1000);
     });
 
-    // 🟢 Chat
-    function sendMessage() {
-      const inp = document.getElementById('chat-input');
-      const msg = inp.value.trim();
-      if (!msg) return;
-      socket.emit('chat', { room, message: msg });
-      inp.value = '';
-    }
-    function addEmoji(e) {
-      const inp = document.getElementById('chat-input');
-      inp.value += e; inp.focus();
-    }
-    socket.on('chat', data => {
-      const who = data.sender === myId ? 'You' : 'Opponent';
-      const div = document.createElement('div');
-      div.textContent = `${who}: ${data.message}`;
-      document.getElementById('chat-messages').appendChild(div);
-    });
-
-    // 🟢 UI Helpers
-    function setStatus(txt){document.getElementById('status').innerText = txt;}
-    function show(id){document.getElementById(id).classList.remove('hidden');}
-    function hide(id){document.getElementById(id).classList.add('hidden');}
-    function setInstruction(txt){document.getElementById('btn-instruction').innerText = txt;}
-    function addHistory(txt){
-      const h = document.getElementById('score-history');
-      h.innerHTML += `<div>${txt}</div>`;
-      h.scrollTop = h.scrollHeight;
-    }
-    function addScore(who){
-      scores[who]++;
-    }
-
-    // 🏆 End & Confetti
     function endGame(){
-      const winner = scores.me > scores.opp ? '🎉 YOU WIN!' : '😢 YOU LOSE!';
+      const winner = scores.me > scores.opp ? '🎉 YOU WIN!' : scores.me === scores.opp ? '🤝 DRAW!' : '😢 YOU LOSE!';
       setStatus(winner);
       startConfetti();
     }
@@ -257,6 +231,52 @@
         document.body.appendChild(d);
         setTimeout(() => d.remove(), 5000);
       }
+    }
+
+    function sendMessage() {
+      const inp = document.getElementById('chat-input');
+      const msg = inp.value.trim();
+      if (!msg) return;
+      socket.emit('chat', { room, message: msg });
+      inp.value = '';
+    }
+
+    function addEmoji(e) {
+      const inp = document.getElementById('chat-input');
+      inp.value += e; inp.focus();
+    }
+
+    socket.on('chat', data => {
+      const who = data.sender === myId ? 'You' : 'Opponent';
+      const div = document.createElement('div');
+      div.textContent = `${who}: ${data.message}`;
+      document.getElementById('chat-messages').appendChild(div);
+    });
+
+    function setStatus(txt) {
+      document.getElementById('status').innerText = txt;
+    }
+
+    function setInstruction(txt) {
+      document.getElementById('btn-instruction').innerText = txt;
+    }
+
+    function show(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function hide(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function addHistory(txt) {
+      const h = document.getElementById('score-history');
+      h.innerHTML += `<div>${txt}</div>`;
+      h.scrollTop = h.scrollHeight;
+    }
+
+    function clearButtons() {
+      // Future use for animation or delay
     }
   </script>
 </body>
